@@ -2,8 +2,14 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 
-router.get('/', (req, res) => {
+router.get('/', (_req, res) => {
   res.json(db.getAllClients());
+});
+
+router.get('/:id', (req, res) => {
+  const client = db.getClientById(Number(req.params.id));
+  if (!client) return res.status(404).json({ error: 'Client not found' });
+  res.json(client);
 });
 
 router.post('/', (req, res) => {
@@ -27,7 +33,9 @@ router.put('/:id', (req, res) => {
 });
 
 router.delete('/:id', (req, res) => {
-  db.deleteClient(req.params.id);
+  const existing = db.getClientById(Number(req.params.id));
+  if (!existing) return res.status(404).json({ error: 'Client not found' });
+  db.deleteClient(Number(req.params.id));
   res.status(204).send();
 });
 

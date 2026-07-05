@@ -70,3 +70,20 @@ test('PUT /api/clients/:id returns 404 for unknown id', async () => {
   });
   expect(res.status).toBe(404);
 });
+
+test('GET /api/clients/:id returns client', async () => {
+  const created = db.createClient({ name: 'Test', business_type: 'Roofing', location: 'SA', brand_voice: '' });
+  const res = await request(app).get(`/api/clients/${created.id}`);
+  expect(res.status).toBe(200);
+  expect(res.body.id).toBe(created.id);
+});
+
+test('GET /api/clients/:id returns 404 for unknown id', async () => {
+  const res = await request(app).get('/api/clients/9999');
+  expect(res.status).toBe(404);
+});
+
+test('DELETE /api/clients/:id returns 404 for unknown id', async () => {
+  const res = await request(app).delete('/api/clients/9999');
+  expect(res.status).toBe(404);
+});
