@@ -1,0 +1,122 @@
+<div>
+  <div class="page-title">History</div>
+  <div class="page-subtitle">Browse all generated posts. Copy any post again anytime.</div>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:28px;">
+    <select id="client-filter" style="width:auto;margin-bottom:0;min-width:220px;">
+      <option value="">All Clients</option>
+    </select>
+  </div>
+
+  <div id="history-list"><div class="loading">Loading history...</div></div>
+</div>
+
+<script>
+function esc(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Block content keyed by "postId-blockIndex" for copy delegation
+var blockMap = {};
+
+async function loadClients() {
+  try {
+    var res = await fetch('/api/clients');
+    if (!res.ok) throw new Error('Failed to load clients');
+    var clients = await res.json();
+    var select = document.getElementById('client-filter');
+    clients.forEach(function(c) {
+      var opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name;
+      select.appendChild(opt);
+    });
+  } catch (err) {
+    showToast('Could not load clients', 'error');
+  }
+}
+
+async function loadHistory() {
+  var clientId = document.getElementById('client-filter').value;
+  var url = clientId ? '/api/posts?clientId=' + encodeURIComponent(clientId) : '/api/posts';
+  var list = document.getElementById('history-list');
+
+  list.innerHTML = '<div class="loading">Loading history...</div>';
+  blockMap = {};
+
+  try {
+    var res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to load posts');
+    var posts = await res.json();
+
+    // Sort newest first
+    posts.sort(function(a, b) {
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+
+    if (posts.length === 0) {
+      list.innerHTML = '<div class="empty-state">No posts yet. Generate some content first.</div>';
+      return;
+    }
+
+    var html = '';
+    posts.forEach(function(post) {
+      var date = new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      var postBlocks = (post.generated_content || '').split(/\n(?=POST \d)/).filter(Boolean);
+
+      // Store blocks for copy delegation
+      postBlocks.forEach(function(block, i) {
+        blockMap[post.id + '-' + i] = block;
+      });
+
+      var blocksHtml = postBlocks.map(function(block, i) {
+        var titleMatch = block.match(/^(POST \d+ — .+)/);
+        var title = titleMatch ? titleMatch[1] : 'Post ' + (i + 1);
+        var bodyText = block.replace(/^POST \d+ — .+\n/, '').trim();
+        return (
+          '<div class="post-block" style="margin-bottom:8px;">' +
+            '<div class="post-block-header">' +
+              '<span class="badge badge-accent">' + esc(title) + '</span>' +
+              '<button class="btn btn-secondary btn-sm" data-post-id="' + esc(String(post.id)) + '" data-block-index="' + i + '">Copy</button>' +
+            '</div>' +
+            '<div class="post-content">' + esc(bodyText) + '</div>' +
+          '</div>'
+        );
+      }).join('');
+
+      html += (
+        '<div class="card" style="margin-bottom:16px;">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">' +
+            '<div>' +
+              '<div style="font-weight:600;margin-bottom:2px;">' + esc(post.client_name || 'Unknown Client') + '</div>' +
+              '<div style="color:var(--text-muted);font-size:12px;">Generated ' + esc(date) + ' &middot; Week of ' + esc(post.week_of || '') + '</div>' +
+            '</div>' +
+          '</div>' +
+          blocksHtml +
+        '</div>'
+      );
+    });
+
+    list.innerHTML = html;
+  } catch (err) {
+    list.innerHTML = '<div class="empty-state">Failed to load history.</div>';
+    showToast('Could not load history', 'error');
+  }
+}
+
+// Event delegation for Copy buttons
+document.getElementById('history-list').addEventListener('click', function(e) {
+  var btn = e.target.closest('button[data-post-id]');
+  if (!btn) return;
+  var key = btn.getAttribute('data-post-id') + '-' + btn.getAttribute('data-block-index');
+  var content = blockMap[key];
+  if (content) {
+    copyToClipboard(content, btn);
+  }
+});
+
+// Reload when filter changes
+document.getElementById('client-filter').addEventListener('change', loadHistory);
+
+loadClients().then(loadHistory);
+</script>
