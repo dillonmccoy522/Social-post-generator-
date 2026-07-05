@@ -1,0 +1,114 @@
+<div>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:36px;">
+    <div>
+      <div class="page-title">Clients</div>
+      <div class="page-subtitle">Manage your client accounts and brand voice settings.</div>
+    </div>
+    <button class="btn btn-primary" onclick="showForm()">+ Add Client</button>
+  </div>
+
+  <!-- ADD / EDIT FORM -->
+  <div id="client-form" class="card" style="display:none;margin-bottom:24px;">
+    <div class="section-label" id="form-label">New Client</div>
+    <input type="hidden" id="edit-id" />
+    <div class="form-row">
+      <div>
+        <label>Business Name</label>
+        <input type="text" id="f-name" placeholder="San Antonio Roofing Co." />
+      </div>
+      <div>
+        <label>Business Type</label>
+        <input type="text" id="f-type" placeholder="Roofing" />
+      </div>
+    </div>
+    <label>Location</label>
+    <input type="text" id="f-location" placeholder="San Antonio, TX + northern areas" />
+    <label>Brand Voice Notes</label>
+    <textarea id="f-voice" placeholder="e.g. Friendly and direct. Emphasize 20+ years experience. Avoid corporate-speak."></textarea>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" onclick="saveClient()">Save Client</button>
+      <button class="btn btn-ghost" onclick="hideForm()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- CLIENT LIST -->
+  <div id="client-list"><div class="empty-state">Loading clients...</div></div>
+</div>
+
+<script>
+async function loadClients() {
+  const res = await fetch('/api/clients');
+  const clients = await res.json();
+  const list = document.getElementById('client-list');
+  if (clients.length === 0) {
+    list.innerHTML = '<div class="empty-state">No clients yet. Add your first client above.</div>';
+    return;
+  }
+  list.innerHTML = clients.map(c => `
+    <div class="card" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+      <div>
+        <div style="font-weight:600;margin-bottom:4px;">${c.name}</div>
+        <div style="color:var(--text-muted);font-size:12px;">${c.business_type} · ${c.location}</div>
+        ${c.last_pillar ? `<span class="badge" style="margin-top:8px;display:inline-block;">${c.last_pillar}</span>` : ''}
+        ${c.brand_voice ? `<div style="color:var(--text-secondary);font-size:12.5px;margin-top:6px;">${c.brand_voice}</div>` : ''}
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button class="btn btn-secondary btn-sm" onclick="editClient(${c.id}, '${escQ(c.name)}', '${escQ(c.business_type)}', '${escQ(c.location)}', '${escQ(c.brand_voice || '')}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteClient(${c.id})">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function escQ(str) { return str.replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+function showForm(label = 'New Client') {
+  document.getElementById('client-form').style.display = 'block';
+  document.getElementById('form-label').textContent = label;
+}
+
+function hideForm() {
+  document.getElementById('client-form').style.display = 'none';
+  document.getElementById('edit-id').value = '';
+  ['f-name','f-type','f-location','f-voice'].forEach(id => document.getElementById(id).value = '');
+}
+
+function editClient(id, name, type, location, voice) {
+  document.getElementById('edit-id').value = id;
+  document.getElementById('f-name').value = name;
+  document.getElementById('f-type').value = type;
+  document.getElementById('f-location').value = location;
+  document.getElementById('f-voice').value = voice;
+  showForm('Edit Client');
+  document.getElementById('client-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function saveClient() {
+  const id = document.getElementById('edit-id').value;
+  const body = {
+    name: document.getElementById('f-name').value.trim(),
+    business_type: document.getElementById('f-type').value.trim(),
+    location: document.getElementById('f-location').value.trim(),
+    brand_voice: document.getElementById('f-voice').value.trim(),
+  };
+  if (!body.name || !body.business_type || !body.location) {
+    showToast('Name, business type, and location are required');
+    return;
+  }
+  const method = id ? 'PUT' : 'POST';
+  const url = id ? `/api/clients/${id}` : '/api/clients';
+  await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  hideForm();
+  loadClients();
+  showToast(id ? 'Client updated' : 'Client added');
+}
+
+async function deleteClient(id) {
+  if (!confirm('Delete this client? All post history for this client will also be removed.')) return;
+  await fetch(`/api/clients/${id}`, { method: 'DELETE' });
+  loadClients();
+  showToast('Client deleted');
+}
+
+loadClients();
+</script>
