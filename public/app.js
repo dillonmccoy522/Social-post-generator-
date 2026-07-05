@@ -17,14 +17,22 @@ async function loadPage(pageName) {
   const content = document.getElementById('content');
   content.innerHTML = '<div class="loading">Loading...</div>';
 
-  const res = await fetch(pages[pageName]);
-  const html = await res.text();
-  content.innerHTML = html;
+  try {
+    const res = await fetch(pages[pageName]);
+    if (!res.ok) {
+      content.innerHTML = '<div class="empty-state">Page unavailable.</div>';
+      return;
+    }
+    const html = await res.text();
+    content.innerHTML = html;
 
-  const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/);
-  if (scriptMatch) {
-    const fn = new Function(scriptMatch[1]);
-    fn();
+    const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/);
+    if (scriptMatch) {
+      const fn = new Function(scriptMatch[1]);
+      fn();
+    }
+  } catch (err) {
+    content.innerHTML = '<div class="empty-state">Failed to load page.</div>';
   }
 }
 
@@ -52,4 +60,4 @@ document.querySelectorAll('.nav-item').forEach(el => {
 });
 
 // Default page
-loadPage('generate');
+loadPage('clients');
