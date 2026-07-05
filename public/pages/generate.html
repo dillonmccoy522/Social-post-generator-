@@ -1,0 +1,115 @@
+<div>
+  <div class="page-title">Generate Posts</div>
+  <div class="page-subtitle">Fill in this week's photo details and generate 3 ready-to-post captions.</div>
+
+  <div class="card">
+    <div class="section-label">Client</div>
+    <select id="client-select">
+      <option value="">Select a client...</option>
+    </select>
+
+    <div class="section-label">Photos This Week</div>
+    <label>Photo 1 — describe what's in it</label>
+    <input type="text" id="photo1" placeholder="Before: damaged shingles on a 15-year-old asphalt roof in Boerne" />
+    <label>Photo 2 — describe what's in it</label>
+    <input type="text" id="photo2" placeholder="After: brand new architectural shingles, charcoal color, clean ridge line" />
+    <label>Photo 3 — describe what's in it</label>
+    <input type="text" id="photo3" placeholder="Crew photo — 4 guys on the roof, morning sun, job site in the background" />
+
+    <div class="section-label" style="margin-top:4px;">Job Details (optional)</div>
+    <textarea id="job-details" placeholder="Full replacement on a 2,400 sq ft home in Boerne. Hail damage from the storm last month. Installed CertainTeed Landmark shingles."></textarea>
+
+    <div class="section-label">CTA Preference (optional)</div>
+    <input type="text" id="cta" placeholder="Call for a free inspection — no pressure, just answers" />
+
+    <button class="btn btn-primary" id="generate-btn">
+      ⚡ Generate Posts
+    </button>
+  </div>
+
+  <div id="output" style="margin-top:24px;"></div>
+</div>
+
+<script>
+async function loadClients() {
+  const res = await fetch('/api/clients');
+  const clients = await res.json();
+  const select = document.getElementById('client-select');
+  if (clients.length === 0) {
+    select.innerHTML = '<option value="">No clients yet — add one in Clients</option>';
+    return;
+  }
+  clients.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name + ' — ' + c.location;
+    select.appendChild(opt);
+  });
+}
+
+async function generatePosts() {
+  const clientId = document.getElementById('client-select').value;
+  const photos = [
+    document.getElementById('photo1').value.trim(),
+    document.getElementById('photo2').value.trim(),
+    document.getElementById('photo3').value.trim(),
+  ];
+  const jobDetails = document.getElementById('job-details').value.trim();
+  const cta = document.getElementById('cta').value.trim();
+
+  if (!clientId) { showToast('Select a client first'); return; }
+  if (photos.some(p => !p)) { showToast('All 3 photo descriptions are required'); return; }
+
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating...';
+  document.getElementById('output').innerHTML = '';
+
+  const res = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clientId: parseInt(clientId), photos, jobDetails, cta }),
+  });
+
+  btn.disabled = false;
+  btn.innerHTML = '⚡ Generate Posts';
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+    showToast('Error: ' + (err.error || 'Generation failed'));
+    return;
+  }
+
+  const { posts } = await res.json();
+  renderPosts(posts);
+}
+
+function renderPosts(posts) {
+  const output = document.getElementById('output');
+  output.innerHTML = '<div class="section-label">Generated Posts — Ready for Metricool</div>';
+
+  posts.forEach(function(block, i) {
+    const titleMatch = block.match(/^(POST \d+ — .+)/);
+    const title = titleMatch ? titleMatch[1] : 'Post ' + (i + 1);
+    const bodyText = block.replace(/^POST \d+ — .+\n/, '').trim();
+
+    const div = document.createElement('div');
+    div.className = 'post-block';
+    div.innerHTML =
+      '<div class="post-block-header">' +
+        '<span class="badge badge-accent">' + title + '</span>' +
+        '<button class="btn btn-secondary btn-sm" data-post-index="' + i + '">Copy</button>' +
+      '</div>' +
+      '<div class="post-content">' + bodyText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+
+    div.querySelector('button').addEventListener('click', function() {
+      copyToClipboard(block);
+    });
+
+    output.appendChild(div);
+  });
+}
+
+document.getElementById('generate-btn').addEventListener('click', generatePosts);
+loadClients();
+</script>
