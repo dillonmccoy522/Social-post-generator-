@@ -62,8 +62,15 @@ Rules:
 - Each CTA should be direct and actionable`;
 }
 
+function parsePostsFromContent(content) {
+  const parts = content.split(/(?=POST \d)/);
+  return parts.filter(p => p.trim()).slice(0, 3).map(p => p.trim());
+}
+
 router.post('/', async (req, res) => {
   const { clientId, photos, jobDetails, cta } = req.body;
+
+  if (!clientId) return res.status(400).json({ error: 'clientId is required' });
 
   if (!photos || !Array.isArray(photos) || photos.length !== 3) {
     return res.status(400).json({ error: '3 photo descriptions are required' });
@@ -79,26 +86,32 @@ Photo 2: ${photos[1]}
 Photo 3: ${photos[2]}${jobDetails ? `\nJob Details: ${jobDetails}` : ''}
 CTA Preference: ${cta || 'Call for a free inspection — no pressure, just answers'}`;
 
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2000,
-    system: buildSystemPrompt(client, pillars),
-    messages: [{ role: 'user', content: userMessage }],
-  });
+  let message;
+  try {
+    message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      system: buildSystemPrompt(client, pillars),
+      messages: [{ role: 'user', content: userMessage }],
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 
   const generatedContent = message.content[0].text;
+  const parsedPosts = parsePostsFromContent(generatedContent);
   const weekOf = new Date().toISOString().split('T')[0];
 
-  const post = db.createPost({
+  db.updateClientLastPillar(clientId, pillars[2]);
+
+  db.createPost({
     clientId,
     weekOf,
     photoDescriptions: JSON.stringify(photos),
     generatedContent,
   });
 
-  db.updateClientLastPillar(clientId, pillars[2]);
-
-  res.json({ generatedContent, postId: post.id });
+  res.json({ posts: parsedPosts });
 });
 
 module.exports = router;
