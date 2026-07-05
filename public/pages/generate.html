@@ -31,20 +31,29 @@
 </div>
 
 <script>
+function esc(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 async function loadClients() {
-  const res = await fetch('/api/clients');
-  const clients = await res.json();
-  const select = document.getElementById('client-select');
-  if (clients.length === 0) {
-    select.innerHTML = '<option value="">No clients yet — add one in Clients</option>';
-    return;
+  try {
+    const res = await fetch('/api/clients');
+    if (!res.ok) throw new Error('Failed to load clients');
+    const clients = await res.json();
+    const select = document.getElementById('client-select');
+    if (clients.length === 0) {
+      select.innerHTML = '<option value="">No clients yet — add one in Clients</option>';
+      return;
+    }
+    clients.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name + ' — ' + c.location;
+      select.appendChild(opt);
+    });
+  } catch (err) {
+    showToast('Could not load clients', 'error');
   }
-  clients.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.id;
-    opt.textContent = c.name + ' — ' + c.location;
-    select.appendChild(opt);
-  });
 }
 
 async function generatePosts() {
@@ -65,23 +74,27 @@ async function generatePosts() {
   btn.innerHTML = '<span class="spinner"></span> Generating...';
   document.getElementById('output').innerHTML = '';
 
-  const res = await fetch('/api/generate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ clientId: parseInt(clientId), photos, jobDetails, cta }),
-  });
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId: parseInt(clientId, 10), photos, jobDetails, cta }),
+    });
 
-  btn.disabled = false;
-  btn.innerHTML = '⚡ Generate Posts';
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+      showToast('Error: ' + (err.error || 'Generation failed'));
+      return;
+    }
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Unknown error' }));
-    showToast('Error: ' + (err.error || 'Generation failed'));
-    return;
+    const { posts } = await res.json();
+    renderPosts(posts);
+  } catch (err) {
+    showToast('Network error: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '⚡ Generate Posts';
   }
-
-  const { posts } = await res.json();
-  renderPosts(posts);
 }
 
 function renderPosts(posts) {
@@ -97,7 +110,7 @@ function renderPosts(posts) {
     div.className = 'post-block';
     div.innerHTML =
       '<div class="post-block-header">' +
-        '<span class="badge badge-accent">' + title + '</span>' +
+        '<span class="badge badge-accent">' + esc(title) + '</span>' +
         '<button class="btn btn-secondary btn-sm" data-post-index="' + i + '">Copy</button>' +
       '</div>' +
       '<div class="post-content">' + bodyText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';

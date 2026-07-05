@@ -4,7 +4,7 @@
       <div class="page-title">Clients</div>
       <div class="page-subtitle">Manage your client accounts and brand voice settings.</div>
     </div>
-    <button class="btn btn-primary" onclick="showForm()">+ Add Client</button>
+    <button class="btn btn-primary" id="add-btn">+ Add Client</button>
   </div>
 
   <!-- ADD / EDIT FORM -->
@@ -26,8 +26,8 @@
     <label>Brand Voice Notes</label>
     <textarea id="f-voice" placeholder="e.g. Friendly and direct. Emphasize 20+ years experience. Avoid corporate-speak."></textarea>
     <div style="display:flex;gap:10px;">
-      <button class="btn btn-primary" onclick="saveClient()">Save Client</button>
-      <button class="btn btn-ghost" onclick="hideForm()">Cancel</button>
+      <button class="btn btn-primary" id="save-btn">Save Client</button>
+      <button class="btn btn-ghost" id="cancel-btn">Cancel</button>
     </div>
   </div>
 
@@ -57,8 +57,8 @@ async function loadClients() {
         ${c.brand_voice ? `<div style="color:var(--text-secondary);font-size:12.5px;margin-top:6px;">${esc(c.brand_voice)}</div>` : ''}
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;">
-        <button class="btn btn-secondary btn-sm" onclick="editClient(${c.id}, '${escQ(c.name)}', '${escQ(c.business_type)}', '${escQ(c.location)}', '${escQ(c.brand_voice || '')}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteClient(${c.id})">Delete</button>
+        <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${c.id}" data-name="${esc(c.name)}" data-type="${esc(c.business_type)}" data-location="${esc(c.location)}" data-voice="${esc(c.brand_voice || '')}">Edit</button>
+        <button class="btn btn-danger btn-sm" data-action="delete" data-id="${c.id}">Delete</button>
       </div>
     </div>
   `).join('');
@@ -124,4 +124,22 @@ async function deleteClient(id) {
 }
 
 loadClients();
+
+// Wire up static button handlers
+document.getElementById('add-btn').addEventListener('click', showForm);
+document.getElementById('save-btn').addEventListener('click', saveClient);
+document.getElementById('cancel-btn').addEventListener('click', hideForm);
+
+// Event delegation for dynamically-rendered client cards
+document.getElementById('client-list').addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const id = parseInt(btn.dataset.id, 10);
+  if (action === 'edit') {
+    editClient(id, btn.dataset.name, btn.dataset.type, btn.dataset.location, btn.dataset.voice);
+  } else if (action === 'delete') {
+    deleteClient(id);
+  }
+});
 </script>
