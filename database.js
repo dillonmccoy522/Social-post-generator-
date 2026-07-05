@@ -82,9 +82,13 @@ function createPost({ clientId, weekOf, photoDescriptions, generatedContent }) {
 }
 
 function getPostsByClientId(clientId) {
-  return getDb().prepare(
-    'SELECT * FROM posts WHERE client_id = ? ORDER BY created_at DESC'
-  ).all(clientId);
+  return getDb().prepare(`
+    SELECT posts.*, clients.name as client_name
+    FROM posts
+    JOIN clients ON posts.client_id = clients.id
+    WHERE posts.client_id = ?
+    ORDER BY posts.created_at DESC
+  `).all(clientId);
 }
 
 function getAllPosts() {
