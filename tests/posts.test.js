@@ -38,3 +38,8 @@ test('GET /api/posts?clientId filters by client', async () => {
   expect(res.body).toHaveLength(1);
   expect(res.body[0].generated_content).toBe('A content');
 });
+
+test('GET /api/posts?clientId=abc returns 400', async () => {
+  const res = await request(app).get('/api/posts?clientId=abc');
+  expect(res.status).toBe(400);
+});
