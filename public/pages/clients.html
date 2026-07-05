@@ -36,6 +36,10 @@
 </div>
 
 <script>
+function esc(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 async function loadClients() {
   const res = await fetch('/api/clients');
   const clients = await res.json();
@@ -47,10 +51,10 @@ async function loadClients() {
   list.innerHTML = clients.map(c => `
     <div class="card" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
       <div>
-        <div style="font-weight:600;margin-bottom:4px;">${c.name}</div>
-        <div style="color:var(--text-muted);font-size:12px;">${c.business_type} · ${c.location}</div>
-        ${c.last_pillar ? `<span class="badge" style="margin-top:8px;display:inline-block;">${c.last_pillar}</span>` : ''}
-        ${c.brand_voice ? `<div style="color:var(--text-secondary);font-size:12.5px;margin-top:6px;">${c.brand_voice}</div>` : ''}
+        <div style="font-weight:600;margin-bottom:4px;">${esc(c.name)}</div>
+        <div style="color:var(--text-muted);font-size:12px;">${esc(c.business_type)} · ${esc(c.location)}</div>
+        ${c.last_pillar ? `<span class="badge" style="margin-top:8px;display:inline-block;">${esc(c.last_pillar)}</span>` : ''}
+        ${c.brand_voice ? `<div style="color:var(--text-secondary);font-size:12.5px;margin-top:6px;">${esc(c.brand_voice)}</div>` : ''}
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;">
         <button class="btn btn-secondary btn-sm" onclick="editClient(${c.id}, '${escQ(c.name)}', '${escQ(c.business_type)}', '${escQ(c.location)}', '${escQ(c.brand_voice || '')}')">Edit</button>
@@ -60,7 +64,7 @@ async function loadClients() {
   `).join('');
 }
 
-function escQ(str) { return str.replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+function escQ(str) { return String(str || '').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, ''); }
 
 function showForm(label = 'New Client') {
   document.getElementById('client-form').style.display = 'block';
@@ -97,7 +101,12 @@ async function saveClient() {
   }
   const method = id ? 'PUT' : 'POST';
   const url = id ? `/api/clients/${id}` : '/api/clients';
-  await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    showToast(err.error || 'Failed to save client', 'error');
+    return;
+  }
   hideForm();
   loadClients();
   showToast(id ? 'Client updated' : 'Client added');
@@ -105,7 +114,11 @@ async function saveClient() {
 
 async function deleteClient(id) {
   if (!confirm('Delete this client? All post history for this client will also be removed.')) return;
-  await fetch(`/api/clients/${id}`, { method: 'DELETE' });
+  const res = await fetch(`/api/clients/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    showToast('Failed to delete client', 'error');
+    return;
+  }
   loadClients();
   showToast('Client deleted');
 }
