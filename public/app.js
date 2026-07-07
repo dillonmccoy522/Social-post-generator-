@@ -2,6 +2,7 @@ const pages = {
   generate: '/pages/generate.html',
   clients: '/pages/clients.html',
   history: '/pages/history.html',
+  media: '/pages/media.html',
 };
 
 let currentPage = null;

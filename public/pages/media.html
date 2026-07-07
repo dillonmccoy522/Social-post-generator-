@@ -1,0 +1,183 @@
+<div class="page-header">
+  <h1>Media Generation</h1>
+  <p class="page-subtitle">Scan Drive photos and generate marketing prompts</p>
+</div>
+
+<div class="card">
+  <div class="form-group">
+    <label for="media-client-select">Client</label>
+    <select id="media-client-select">
+      <option value="">Select a client...</option>
+    </select>
+  </div>
+  <div id="auth-warning" style="display:none" class="empty-state">
+    Google Drive not connected. <a href="/auth/google">Connect Google Drive</a>
+  </div>
+  <button id="scan-btn" class="btn btn-primary" disabled>Scan Drive Photos</button>
+</div>
+
+<div class="card" id="photos-section" style="display:none">
+  <h2>Available Photos</h2>
+  <p id="photos-count" class="page-subtitle"></p>
+  <div id="photos-grid" class="photos-grid"></div>
+  <button id="generate-btn" class="btn btn-primary">Generate Marketing Plan</button>
+</div>
+
+<div class="card" id="plan-section" style="display:none">
+  <h2>Marketing Plan</h2>
+
+  <div class="plan-block">
+    <div class="plan-block-header">
+      <h3>Selected Photos</h3>
+    </div>
+    <ul id="selected-photos-list" class="selected-photos-list"></ul>
+  </div>
+
+  <div class="plan-block">
+    <div class="plan-block-header">
+      <h3>Marketing Script</h3>
+      <button class="btn btn-sm" onclick="copyToClipboard(document.getElementById('script-output').textContent)">Copy</button>
+    </div>
+    <p id="script-output" class="plan-output"></p>
+  </div>
+
+  <div class="plan-block">
+    <div class="plan-block-header">
+      <h3>Higgsfield Video Prompt</h3>
+      <button class="btn btn-sm" onclick="copyToClipboard(document.getElementById('higgsfield-output').textContent)">Copy</button>
+    </div>
+    <p id="higgsfield-output" class="plan-output"></p>
+  </div>
+
+  <div class="plan-block">
+    <div class="plan-block-header">
+      <h3>Midjourney Image Prompt</h3>
+      <button class="btn btn-sm" onclick="copyToClipboard(document.getElementById('midjourney-output').textContent)">Copy</button>
+    </div>
+    <p id="midjourney-output" class="plan-output"></p>
+  </div>
+
+  <button id="save-btn" class="btn btn-primary">Save to Drive &amp; History</button>
+</div>
+
+<div class="card" id="media-history-section" style="display:none">
+  <h2>Past Media Jobs</h2>
+  <div id="media-history-list"></div>
+</div>
+
+<script>
+let scannedPhotos = [];
+let currentPlan = null;
+let currentClientId = null;
+
+async function loadClients() {
+  const res = await fetch('/api/clients');
+  const clients = await res.json();
+  const select = document.getElementById('media-client-select');
+  clients.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    select.appendChild(opt);
+  });
+}
+
+document.getElementById('media-client-select').addEventListener('change', function () {
+  currentClientId = this.value;
+  document.getElementById('scan-btn').disabled = !currentClientId;
+  document.getElementById('photos-section').style.display = 'none';
+  document.getElementById('plan-section').style.display = 'none';
+  if (currentClientId) loadHistory(currentClientId);
+});
+
+document.getElementById('scan-btn').addEventListener('click', async function () {
+  this.disabled = true;
+  this.textContent = 'Scanning...';
+  document.getElementById('photos-section').style.display = 'none';
+  document.getElementById('auth-warning').style.display = 'none';
+  try {
+    const res = await fetch(`/api/drive/scan/${currentClientId}`);
+    if (res.status === 401) { document.getElementById('auth-warning').style.display = 'block'; return; }
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Scan failed'); return; }
+    scannedPhotos = data.photos;
+    const grid = document.getElementById('photos-grid');
+    grid.innerHTML = scannedPhotos.length === 0
+      ? '<p class="empty-state">No new photos available.</p>'
+      : scannedPhotos.map(p => `<div class="photo-card"><p class="photo-name">${p.name}</p><p class="photo-date">${p.modifiedTime.split('T')[0]}</p></div>`).join('');
+    document.getElementById('photos-count').textContent = `${scannedPhotos.length} new photo${scannedPhotos.length !== 1 ? 's' : ''} found`;
+    document.getElementById('photos-section').style.display = 'block';
+    if (data.message) showToast(data.message);
+  } catch (err) {
+    showToast('Scan failed: ' + err.message);
+  } finally {
+    this.disabled = false;
+    this.textContent = 'Scan Drive Photos';
+  }
+});
+
+document.getElementById('generate-btn').addEventListener('click', async function () {
+  this.disabled = true;
+  this.textContent = 'Generating...';
+  try {
+    const res = await fetch('/api/media/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId: currentClientId, photos: scannedPhotos }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Generation failed'); return; }
+    currentPlan = data.plan;
+    document.getElementById('selected-photos-list').innerHTML =
+      (data.plan.selectedPhotos || []).map(p => `<li><strong>${p.name}</strong> — ${p.reason}</li>`).join('');
+    document.getElementById('script-output').textContent = data.plan.script;
+    document.getElementById('higgsfield-output').textContent = data.plan.higgsfieldPrompt;
+    document.getElementById('midjourney-output').textContent = data.plan.midjourneyPrompt;
+    document.getElementById('plan-section').style.display = 'block';
+  } catch (err) {
+    showToast('Generation failed: ' + err.message);
+  } finally {
+    this.disabled = false;
+    this.textContent = 'Generate Marketing Plan';
+  }
+});
+
+document.getElementById('save-btn').addEventListener('click', async function () {
+  this.disabled = true;
+  this.textContent = 'Saving...';
+  try {
+    const res = await fetch('/api/media/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId: currentClientId, plan: currentPlan }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Save failed'); return; }
+    showToast('Saved to Drive and history');
+    loadHistory(currentClientId);
+  } catch (err) {
+    showToast('Save failed: ' + err.message);
+  } finally {
+    this.disabled = false;
+    this.textContent = 'Save to Drive & History';
+  }
+});
+
+async function loadHistory(clientId) {
+  const res = await fetch(`/api/media/history/${clientId}`);
+  const data = await res.json();
+  const section = document.getElementById('media-history-section');
+  const list = document.getElementById('media-history-list');
+  if (!data.jobs || data.jobs.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  list.innerHTML = data.jobs.map(job => `
+    <div class="history-item">
+      <p class="history-date">${job.created_at.split(' ')[0]}</p>
+      <p><strong>Script:</strong> ${job.script}</p>
+      <p><strong>Higgsfield:</strong> ${job.higgsfield_prompt}</p>
+      <p><strong>Midjourney:</strong> ${job.midjourney_prompt}</p>
+    </div>`).join('');
+}
+
+loadClients();
+</script>
