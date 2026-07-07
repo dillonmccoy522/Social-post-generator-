@@ -12,6 +12,10 @@ const mediaRouter = require('./routes/media');
 
 const app = express();
 
+if (!process.env.SESSION_SECRET) {
+  console.warn('Warning: SESSION_SECRET not set — using insecure default');
+}
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-secret',
   resave: false,
