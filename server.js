@@ -1,14 +1,23 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const session = require('express-session');
 
 const clientsRouter = require('./routes/clients');
 const generateRouter = require('./routes/generate');
 const postsRouter = require('./routes/posts');
+const authRouter = require('./routes/auth');
 
 const app = express();
 
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'dev-secret',
+  resave: false,
+  saveUninitialized: false,
+}));
+
 app.use(express.json());
+app.use('/auth', authRouter);
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
