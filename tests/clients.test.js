@@ -87,3 +87,25 @@ test('DELETE /api/clients/:id returns 404 for unknown id', async () => {
   const res = await request(app).delete('/api/clients/9999');
   expect(res.status).toBe(404);
 });
+
+test('POST /api/clients saves Drive URL fields', async () => {
+  const res = await request(app).post('/api/clients').send({
+    name: 'Drive Client', business_type: 'Roofing', location: 'San Antonio',
+    drive_photos_url: 'https://drive.google.com/drive/folders/photos123',
+    drive_output_url: 'https://drive.google.com/drive/folders/output456',
+  });
+  expect(res.status).toBe(201);
+  expect(res.body.drive_photos_url).toBe('https://drive.google.com/drive/folders/photos123');
+  expect(res.body.drive_output_url).toBe('https://drive.google.com/drive/folders/output456');
+});
+
+test('PUT /api/clients/:id updates Drive URL fields', async () => {
+  const created = (await request(app).post('/api/clients').send({ name: 'X', business_type: 'Y', location: 'Z' })).body;
+  const res = await request(app).put(`/api/clients/${created.id}`).send({
+    name: 'X', business_type: 'Y', location: 'Z', brand_voice: '',
+    drive_photos_url: 'https://drive.google.com/drive/folders/new',
+    drive_output_url: 'https://drive.google.com/drive/folders/out',
+  });
+  expect(res.status).toBe(200);
+  expect(res.body.drive_photos_url).toBe('https://drive.google.com/drive/folders/new');
+});

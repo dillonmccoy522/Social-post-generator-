@@ -13,22 +13,22 @@ router.get('/:id', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  const { name, business_type, location, brand_voice = '' } = req.body;
+  const { name, business_type, location, brand_voice = '', drive_photos_url, drive_output_url } = req.body;
   if (!name || !business_type || !location) {
     return res.status(400).json({ error: 'name, business_type, and location are required' });
   }
-  const client = db.createClient({ name, business_type, location, brand_voice });
+  const client = db.createClient({ name, business_type, location, brand_voice, drive_photos_url, drive_output_url });
   res.status(201).json(client);
 });
 
 router.put('/:id', (req, res) => {
-  const { name, business_type, location, brand_voice = '' } = req.body;
+  const { name, business_type, location, brand_voice = '', drive_photos_url, drive_output_url } = req.body;
   if (!name || !business_type || !location) {
     return res.status(400).json({ error: 'name, business_type, and location are required' });
   }
   const existing = db.getClientById(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Client not found' });
-  const updated = db.updateClient(req.params.id, { name, business_type, location, brand_voice });
+  const updated = db.updateClient(req.params.id, { name, business_type, location, brand_voice, drive_photos_url, drive_output_url });
   res.json(updated);
 });
 
