@@ -14,9 +14,8 @@ router.get('/scan/:clientId', requireAuth, async (req, res) => {
   catch (err) { return res.status(400).json({ error: err.message }); }
 
   try {
-    const usedFileIds = db.getUsedPhotoIds(client.id);
-    const photos = await listPhotos(req.googleAuth, folderId, usedFileIds);
-    if (photos.length === 0) return res.json({ photos: [], message: 'All photos in this folder have been used' });
+    const photos = await listPhotos(req.googleAuth, folderId, []);
+    if (photos.length === 0) return res.json({ photos: [], message: 'No photos found in this folder' });
     res.json({ photos });
   } catch (err) {
     res.status(500).json({ error: err.message });

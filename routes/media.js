@@ -117,66 +117,42 @@ router.post('/brand', requireAuth, async (req, res) => {
         const scale = Math.min(W, H) / 1200;
         const S = n => Math.round(n * scale);
 
-        const BANNER_H    = S(240);
-        const LOGO_SECT_W = S(270);
-        const PAD         = S(24);
-        const QR_SIZE     = S(160);
-        const ACCENT_H    = S(6);
+        const PANEL_W    = S(340);
+        const PAD        = S(28);
+        const LOGO_MAX_W = PANEL_W - PAD * 2;
+        const LOGO_MAX_H = S(150);
+        const QR_SIZE    = S(130);
+        const PANEL_X    = W - PANEL_W;
+        const TEXT_CX    = PANEL_X + Math.round(PANEL_W / 2);
+        const GREEN      = '#87AF68';
+        const iconSize   = S(28);
+        const iconLeft   = PANEL_X + Math.round((PANEL_W - iconSize) / 2);
 
         const logoBuffer = await sharp(logoRaw)
-          .resize(LOGO_SECT_W - S(40), BANNER_H - S(40), { fit: 'inside' })
+          .resize(LOGO_MAX_W, LOGO_MAX_H, { fit: 'inside' })
           .toBuffer();
         const logoMeta = await sharp(logoBuffer).metadata();
         const qrBuffer = qrRaw ? await sharp(qrRaw).resize(QR_SIZE, QR_SIZE).toBuffer() : null;
 
-        const TEXT_X = LOGO_SECT_W + S(30);
-        const qrLeft = W - QR_SIZE - PAD;
+        const DIV1_Y   = Math.round(H * 0.28);
+        const DIV2_Y   = Math.round(H * 0.73);
+        const logoLeft = PANEL_X + Math.round((PANEL_W - logoMeta.width) / 2);
+        const logoTop  = Math.round(PAD + (DIV1_Y - PAD - logoMeta.height) / 2);
+        const qrLeft   = PANEL_X + Math.round((PANEL_W - QR_SIZE) / 2);
+        const qrTop    = DIV2_Y + Math.round((H - DIV2_Y - QR_SIZE - S(20)) / 2);
 
-        // Smart placement — pick the strip that is less visually busy
-        const checkH = Math.min(BANNER_H, Math.floor(H / 2));
-        const [topStats, botStats] = await Promise.all([
-          sharp(photoBuffer).extract({ left: 0, top: 0, width: W, height: checkH }).stats(),
-          sharp(photoBuffer).extract({ left: 0, top: H - checkH, width: W, height: checkH }).stats(),
-        ]);
-        const topBusy = topStats.channels.reduce((s, c) => s + c.stdev, 0);
-        const botBusy = botStats.channels.reduce((s, c) => s + c.stdev, 0);
-        const bannerTop = topBusy <= botBusy ? 0 : H - BANNER_H;
-        const accentY   = bannerTop === 0 ? 0 : bannerTop + BANNER_H - ACCENT_H;
-
-        // Row positions inside the banner
-        const R1 = bannerTop + S(58);   // business name
-        const R2 = bannerTop + S(90);   // website
-        const R3 = bannerTop + S(140);  // phone (hero)
-        const R4 = bannerTop + S(175);  // social row 1 (instagram)
-        const R5 = bannerTop + S(203);  // social row 2 (facebook)
-        const iconSize   = S(18);
-        const socialSize = S(15);
+        const infoTop  = DIV1_Y + S(28);
+        const R1       = infoTop + S(40);              // business name
+        const R2       = infoTop + S(90);              // phone
+        const R3       = infoTop + S(136);             // website
+        const igIconY  = infoTop + S(162);             // instagram icon top
+        const igTextY  = igIconY + iconSize + S(18);   // instagram handle
+        const fbIconY  = igTextY + S(24);              // facebook icon top
+        const fbTextY  = fbIconY + iconSize + S(18);   // facebook handle
 
         const igHandle = client.instagram ? '@' + getHandle(client.instagram) : null;
         const fbHandle = client.facebook  ? '@' + getHandle(client.facebook)  : null;
 
-        // Build social rows — stacked vertically
-        const socialSvg = [];
-        if (igHandle) {
-          const iconTop = R4 - iconSize + S(3);
-          socialSvg.push(
-            `<rect x="${TEXT_X}" y="${iconTop}" width="${iconSize}" height="${iconSize}" rx="${S(4)}" fill="url(#ig-grad)"/>`,
-            `<circle cx="${TEXT_X + iconSize/2}" cy="${iconTop + iconSize/2}" r="${S(5.5)}" stroke="white" stroke-width="${S(2)}" fill="none"/>`,
-            `<circle cx="${TEXT_X + iconSize - S(4)}" cy="${iconTop + S(4)}" r="${S(1.5)}" fill="white"/>`,
-            `<text x="${TEXT_X + iconSize + S(7)}" y="${R4}" fill="#BBBBBB" font-size="${socialSize}" font-family="Arial,Helvetica,sans-serif">${escXml(igHandle)}</text>`,
-          );
-        }
-        if (fbHandle) {
-          const fbY = igHandle ? R5 : R4;
-          const iconTop = fbY - iconSize + S(3);
-          socialSvg.push(
-            `<rect x="${TEXT_X}" y="${iconTop}" width="${iconSize}" height="${iconSize}" rx="${S(4)}" fill="#1877F2"/>`,
-            `<text x="${TEXT_X + S(5)}" y="${fbY - S(1)}" fill="white" font-size="${S(14)}" font-weight="bold" font-family="Arial,Helvetica,sans-serif">f</text>`,
-            `<text x="${TEXT_X + iconSize + S(7)}" y="${fbY}" fill="#BBBBBB" font-size="${socialSize}" font-family="Arial,Helvetica,sans-serif">${escXml(fbHandle)}</text>`,
-          );
-        }
-
-        // Full-photo SVG (W×H transparent except banner) — avoids composite bounds error
         const svgOverlay = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%">
@@ -185,19 +161,26 @@ router.post('/brand', requireAuth, async (req, res) => {
               <stop offset="100%" stop-color="#833ab4"/>
             </linearGradient>
           </defs>
-          <rect x="0" y="${bannerTop}" width="${LOGO_SECT_W}" height="${BANNER_H}" fill="#FFFFFF"/>
-          <rect x="${LOGO_SECT_W}" y="${bannerTop}" width="${W - LOGO_SECT_W}" height="${BANNER_H}" fill="#111111"/>
-          <rect x="0" y="${accentY}" width="${W}" height="${ACCENT_H}" fill="#C84B31"/>
-          ${client.name    ? `<text x="${TEXT_X}" y="${R1}" fill="#FFFFFF" font-size="${S(26)}" font-weight="700" font-family="Arial,Helvetica,sans-serif">${escXml(client.name)}</text>` : ''}
-          ${client.website ? `<text x="${TEXT_X}" y="${R2}" fill="#E2C97E" font-size="${S(16)}" font-family="Arial,Helvetica,sans-serif">${escXml(client.website)}</text>` : ''}
-          ${client.phone   ? `<text x="${TEXT_X}" y="${R3}" fill="#FFFFFF" font-size="${S(30)}" font-weight="700" font-family="Arial,Helvetica,sans-serif">${escXml(client.phone)}</text>` : ''}
-          ${socialSvg.join('\n          ')}
-          ${qrBuffer ? `<text x="${qrLeft + QR_SIZE / 2}" y="${bannerTop + BANNER_H - S(8)}" fill="#555555" font-size="${S(11)}" font-family="Arial,Helvetica,sans-serif" text-anchor="middle">Scan for Reviews</text>` : ''}
+          <rect x="${PANEL_X}" y="0" width="${PANEL_W}" height="${H}" fill="#0C0C10" opacity="0.93"/>
+          <rect x="${PANEL_X}" y="0" width="${S(5)}" height="${H}" fill="${GREEN}"/>
+          <rect x="${PANEL_X + PAD}" y="${DIV1_Y}" width="${PANEL_W - PAD * 2}" height="${S(1)}" fill="${GREEN}" opacity="0.35"/>
+          <rect x="${PANEL_X + PAD}" y="${DIV2_Y}" width="${PANEL_W - PAD * 2}" height="${S(1)}" fill="${GREEN}" opacity="0.35"/>
+          ${client.name    ? `<text x="${TEXT_CX}" y="${R1}" fill="#FFFFFF" font-size="${S(28)}" font-weight="700" font-family="Arial,Helvetica,sans-serif" text-anchor="middle">${escXml(client.name)}</text>` : ''}
+          ${client.phone   ? `<text x="${TEXT_CX}" y="${R2}" fill="${GREEN}" font-size="${S(26)}" font-weight="600" font-family="Arial,Helvetica,sans-serif" text-anchor="middle">${escXml(client.phone)}</text>` : ''}
+          ${client.website ? `<text x="${TEXT_CX}" y="${R3}" fill="#AAAAAA" font-size="${S(19)}" font-family="Arial,Helvetica,sans-serif" text-anchor="middle">${escXml(client.website)}</text>` : ''}
+          ${igHandle ? `
+          <rect x="${iconLeft}" y="${igIconY}" width="${iconSize}" height="${iconSize}" rx="${S(7)}" fill="url(#ig-grad)"/>
+          <circle cx="${iconLeft + iconSize / 2}" cy="${igIconY + iconSize / 2}" r="${S(8)}" stroke="white" stroke-width="${S(2)}" fill="none"/>
+          <circle cx="${iconLeft + iconSize - S(7)}" cy="${igIconY + S(7)}" r="${S(2)}" fill="white"/>
+          <text x="${TEXT_CX}" y="${igTextY}" fill="#AAAAAA" font-size="${S(18)}" font-family="Arial,Helvetica,sans-serif" text-anchor="middle">${escXml(igHandle)}</text>
+          ` : ''}
+          ${fbHandle ? `
+          <rect x="${iconLeft}" y="${fbIconY}" width="${iconSize}" height="${iconSize}" rx="${S(7)}" fill="#1877F2"/>
+          <text x="${iconLeft + S(8)}" y="${fbIconY + iconSize - S(6)}" fill="white" font-size="${S(21)}" font-weight="bold" font-family="Arial,Helvetica,sans-serif">f</text>
+          <text x="${TEXT_CX}" y="${fbTextY}" fill="#AAAAAA" font-size="${S(18)}" font-family="Arial,Helvetica,sans-serif" text-anchor="middle">${escXml(fbHandle)}</text>
+          ` : ''}
+          ${qrBuffer ? `<text x="${qrLeft + QR_SIZE / 2}" y="${qrTop - S(8)}" fill="#4A4A4A" font-size="${S(12)}" font-family="Arial,Helvetica,sans-serif" text-anchor="middle">Scan for Reviews</text>` : ''}
         </svg>`;
-
-        const logoLeft = Math.round((LOGO_SECT_W - logoMeta.width)  / 2);
-        const logoTop  = bannerTop + Math.round((BANNER_H - logoMeta.height) / 2);
-        const qrTop    = bannerTop + Math.round((BANNER_H - QR_SIZE) / 2);
 
         const svgBuf = Buffer.from(svgOverlay);
 
