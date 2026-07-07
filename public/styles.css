@@ -258,7 +258,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 /* MEDIA PAGE */
 .photos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px;
   margin: 16px 0;
 }
@@ -266,12 +266,49 @@ hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 .photo-card {
   background: var(--surface-raised);
   border-radius: 8px;
-  padding: 10px;
-  text-align: center;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s;
+  position: relative;
+  user-select: none;
 }
 
-.photo-name { font-size: 12px; font-weight: 500; word-break: break-word; margin: 0 0 4px; }
+.photo-card:hover { border-color: var(--border-hover); }
+.photo-card.selected { border-color: var(--accent); }
+
+.photo-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+  background: var(--bg);
+}
+
+.photo-check-overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  pointer-events: none;
+}
+
+.photo-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.photo-card-info { padding: 8px 10px; }
+.photo-name { font-size: 12px; font-weight: 500; word-break: break-word; margin: 0 0 2px; }
 .photo-date { font-size: 11px; color: var(--text-muted); margin: 0; }
+
+.photos-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
 
 .plan-block { margin-bottom: 24px; }
 

@@ -20,7 +20,11 @@
   <h2>Available Photos</h2>
   <p id="photos-count" class="page-subtitle"></p>
   <div id="photos-grid" class="photos-grid"></div>
-  <button id="generate-btn" class="btn btn-primary">Generate Marketing Plan</button>
+  <div class="photos-actions">
+    <button id="select-all-btn" class="btn btn-secondary btn-sm">Select All</button>
+    <button id="brand-selected-btn" class="btn btn-primary" disabled>Brand Selected</button>
+    <button id="generate-btn" class="btn btn-ghost">Generate Marketing Plan</button>
+  </div>
 </div>
 
 <div class="card" id="plan-section" style="display:none">
@@ -106,9 +110,20 @@ document.getElementById('scan-btn').addEventListener('click', async function () 
     if (!res.ok) { showToast(data.error || 'Scan failed'); return; }
     scannedPhotos = data.photos;
     const grid = document.getElementById('photos-grid');
+    allSelected = false;
+    document.getElementById('select-all-btn').textContent = 'Select All';
+    updateBrandBtn();
     grid.innerHTML = scannedPhotos.length === 0
       ? '<p class="empty-state">No new photos available.</p>'
-      : scannedPhotos.map(p => `<div class="photo-card"><p class="photo-name">${esc(p.name)}</p><p class="photo-date">${esc(p.modifiedTime.split('T')[0])}</p></div>`).join('');
+      : scannedPhotos.map((p, i) => `
+          <div class="photo-card" id="photo-card-${i}">
+            <div class="photo-check-overlay"><input type="checkbox" class="photo-checkbox" id="check-${i}"></div>
+            <img src="/api/drive/thumb/${esc(p.id)}" alt="${esc(p.name)}" class="photo-thumb" loading="lazy" onerror="this.style.background='#1a1a20';this.style.minHeight='120px'">
+            <div class="photo-card-info">
+              <p class="photo-name">${esc(p.name)}</p>
+              <p class="photo-date">${esc(p.modifiedTime.split('T')[0])}</p>
+            </div>
+          </div>`).join('');
     document.getElementById('photos-count').textContent = `${scannedPhotos.length} new photo${scannedPhotos.length !== 1 ? 's' : ''} found`;
     document.getElementById('photos-section').style.display = 'block';
     if (data.message) showToast(data.message);
@@ -182,6 +197,78 @@ async function loadHistory(clientId) {
       <p><strong>Midjourney:</strong> ${esc(job.midjourney_prompt)}</p>
     </div>`).join('');
 }
+
+let allSelected = false;
+
+function toggleSelect(index) {
+  const card = document.getElementById(`photo-card-${index}`);
+  const checkbox = document.getElementById(`check-${index}`);
+  const isSelected = card.classList.toggle('selected');
+  checkbox.checked = isSelected;
+  updateBrandBtn();
+}
+
+document.getElementById('photos-grid').addEventListener('click', (e) => {
+  const card = e.target.closest('.photo-card');
+  if (!card || !card.id.startsWith('photo-card-')) return;
+  const i = parseInt(card.id.replace('photo-card-', ''), 10);
+  if (!isNaN(i)) toggleSelect(i);
+});
+
+function updateBrandBtn() {
+  const count = document.querySelectorAll('.photo-checkbox:checked').length;
+  const btn = document.getElementById('brand-selected-btn');
+  btn.disabled = count === 0;
+  btn.textContent = count > 0 ? `Brand Selected (${count})` : 'Brand Selected';
+}
+
+document.getElementById('select-all-btn').addEventListener('click', function () {
+  allSelected = !allSelected;
+  document.querySelectorAll('.photo-checkbox').forEach((c, i) => {
+    c.checked = allSelected;
+    document.getElementById(`photo-card-${i}`).classList.toggle('selected', allSelected);
+  });
+  this.textContent = allSelected ? 'Deselect All' : 'Select All';
+  updateBrandBtn();
+});
+
+document.getElementById('brand-selected-btn').addEventListener('click', async function () {
+  const selected = [...document.querySelectorAll('.photo-checkbox:checked')].map(c => {
+    const i = parseInt(c.id.replace('check-', ''), 10);
+    return { id: scannedPhotos[i].id, name: scannedPhotos[i].name };
+  });
+  this.disabled = true;
+  this.textContent = `Branding ${selected.length} photo${selected.length !== 1 ? 's' : ''}...`;
+  try {
+    const res = await fetch('/api/media/brand', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId: currentClientId, photos: selected }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Branding failed'); return; }
+    const msg = `${data.saved} photo${data.saved !== 1 ? 's' : ''} saved to Drive / ${data.weekFolder}`;
+    if (data.failureReasons && data.failureReasons.length) {
+      showToast(msg + ` · ${data.failed} failed: ${data.failureReasons[0]}`);
+      console.error('Brand failures:', data.failureReasons);
+    } else {
+      showToast(msg);
+    }
+    document.querySelectorAll('.photo-checkbox:checked').forEach(c => {
+      const i = parseInt(c.id.replace('check-', ''), 10);
+      c.checked = false;
+      document.getElementById(`photo-card-${i}`).classList.remove('selected');
+      document.getElementById(`photo-card-${i}`).style.opacity = '0.45';
+    });
+    allSelected = false;
+    document.getElementById('select-all-btn').textContent = 'Select All';
+    updateBrandBtn();
+  } catch (err) {
+    showToast('Branding failed: ' + err.message);
+  } finally {
+    updateBrandBtn();
+  }
+});
 
 loadClients();
 </script>

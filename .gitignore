@@ -1,4 +1,6 @@
 node_modules/
 .env
 data/dashboard.db
+data/dashboard.db-shm
+data/dashboard.db-wal
 data/tokens.json

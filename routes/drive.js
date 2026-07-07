@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../lib/google-auth');
-const { folderIdFromUrl, listPhotos } = require('../lib/drive');
+const { folderIdFromUrl, listPhotos, downloadPhotoThumb } = require('../lib/drive');
 const db = require('../database');
 
 router.get('/scan/:clientId', requireAuth, async (req, res) => {
@@ -20,6 +20,17 @@ router.get('/scan/:clientId', requireAuth, async (req, res) => {
     res.json({ photos });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/thumb/:fileId', requireAuth, async (req, res) => {
+  try {
+    const buffer = await downloadPhotoThumb(req.googleAuth, req.params.fileId);
+    res.set('Content-Type', 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(buffer);
+  } catch (err) {
+    res.status(404).send('');
   }
 });
 

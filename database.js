@@ -43,6 +43,11 @@ function initSchema(db) {
 
   try { db.exec("ALTER TABLE clients ADD COLUMN drive_photos_url TEXT DEFAULT ''"); } catch (_) {}
   try { db.exec("ALTER TABLE clients ADD COLUMN drive_output_url TEXT DEFAULT ''"); } catch (_) {}
+  try { db.exec("ALTER TABLE clients ADD COLUMN phone TEXT DEFAULT ''"); } catch (_) {}
+  try { db.exec("ALTER TABLE clients ADD COLUMN website TEXT DEFAULT ''"); } catch (_) {}
+  try { db.exec("ALTER TABLE clients ADD COLUMN instagram TEXT DEFAULT ''"); } catch (_) {}
+  try { db.exec("ALTER TABLE clients ADD COLUMN facebook TEXT DEFAULT ''"); } catch (_) {}
+  try { db.exec("ALTER TABLE clients ADD COLUMN gmb_url TEXT DEFAULT ''"); } catch (_) {}
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS media_jobs (
@@ -65,18 +70,18 @@ function getClientById(id) {
   return getDb().prepare('SELECT * FROM clients WHERE id = ?').get(id);
 }
 
-function createClient({ name, business_type, location, brand_voice = '', drive_photos_url = '', drive_output_url = '' }) {
+function createClient({ name, business_type, location, brand_voice = '', drive_photos_url = '', drive_output_url = '', phone = '', website = '', instagram = '', facebook = '', gmb_url = '' }) {
   const stmt = getDb().prepare(
-    'INSERT INTO clients (name, business_type, location, brand_voice, drive_photos_url, drive_output_url) VALUES (?, ?, ?, ?, ?, ?)'
+    'INSERT INTO clients (name, business_type, location, brand_voice, drive_photos_url, drive_output_url, phone, website, instagram, facebook, gmb_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
   );
-  const result = stmt.run(name, business_type, location, brand_voice, drive_photos_url, drive_output_url);
+  const result = stmt.run(name, business_type, location, brand_voice, drive_photos_url, drive_output_url, phone, website, instagram, facebook, gmb_url);
   return getClientById(result.lastInsertRowid);
 }
 
-function updateClient(id, { name, business_type, location, brand_voice, drive_photos_url = '', drive_output_url = '' }) {
+function updateClient(id, { name, business_type, location, brand_voice, drive_photos_url = '', drive_output_url = '', phone = '', website = '', instagram = '', facebook = '', gmb_url = '' }) {
   getDb().prepare(
-    'UPDATE clients SET name = ?, business_type = ?, location = ?, brand_voice = ?, drive_photos_url = ?, drive_output_url = ? WHERE id = ?'
-  ).run(name, business_type, location, brand_voice, drive_photos_url, drive_output_url, id);
+    'UPDATE clients SET name = ?, business_type = ?, location = ?, brand_voice = ?, drive_photos_url = ?, drive_output_url = ?, phone = ?, website = ?, instagram = ?, facebook = ?, gmb_url = ? WHERE id = ?'
+  ).run(name, business_type, location, brand_voice, drive_photos_url, drive_output_url, phone, website, instagram, facebook, gmb_url, id);
   return getClientById(id);
 }
 
