@@ -1,3 +1,4 @@
 node_modules/
 .env
 data/dashboard.db
+data/tokens.json

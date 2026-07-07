@@ -93,3 +93,61 @@ test('getAllPosts joins client name', () => {
   const all = db.getAllPosts();
   expect(all[0].client_name).toBe('All Posts Client');
 });
+
+describe('media jobs', () => {
+  let clientId;
+
+  beforeEach(() => {
+    const client = db.createClient({
+      name: 'Test Media Client',
+      business_type: 'Roofing',
+      location: 'San Antonio, TX',
+    });
+    clientId = client.id;
+  });
+
+  test('clients table has drive_photos_url and drive_output_url columns', () => {
+    const client = db.getClientById(clientId);
+    expect(client).toHaveProperty('drive_photos_url');
+    expect(client).toHaveProperty('drive_output_url');
+  });
+
+  test('createMediaJob saves and returns a job', () => {
+    const job = db.createMediaJob({
+      clientId,
+      selectedPhotos: JSON.stringify([{ id: 'abc', name: 'photo1.jpg', reason: 'great shot' }]),
+      script: 'Test script',
+      higgsfieldPrompt: 'Test video prompt',
+      midjourneyPrompt: 'Test image prompt',
+    });
+    expect(job.id).toBeDefined();
+    expect(job.client_id).toBe(clientId);
+    expect(job.script).toBe('Test script');
+  });
+
+  test('getMediaJobsByClientId returns jobs for that client', () => {
+    db.createMediaJob({
+      clientId,
+      selectedPhotos: '[]',
+      script: 'Script A',
+      higgsfieldPrompt: 'Video A',
+      midjourneyPrompt: 'Image A',
+    });
+    const jobs = db.getMediaJobsByClientId(clientId);
+    expect(jobs.length).toBe(1);
+    expect(jobs[0].script).toBe('Script A');
+  });
+
+  test('getUsedPhotoIds returns all photo IDs used for a client', () => {
+    db.createMediaJob({
+      clientId,
+      selectedPhotos: JSON.stringify([{ id: 'photo-1' }, { id: 'photo-2' }]),
+      script: 'S',
+      higgsfieldPrompt: 'H',
+      midjourneyPrompt: 'M',
+    });
+    const ids = db.getUsedPhotoIds(clientId);
+    expect(ids).toContain('photo-1');
+    expect(ids).toContain('photo-2');
+  });
+});

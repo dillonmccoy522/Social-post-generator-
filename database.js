@@ -40,6 +40,21 @@ function initSchema(db) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  try { db.exec("ALTER TABLE clients ADD COLUMN drive_photos_url TEXT DEFAULT ''"); } catch (_) {}
+  try { db.exec("ALTER TABLE clients ADD COLUMN drive_output_url TEXT DEFAULT ''"); } catch (_) {}
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS media_jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+      selected_photos TEXT NOT NULL,
+      script TEXT NOT NULL,
+      higgsfield_prompt TEXT NOT NULL,
+      midjourney_prompt TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 }
 
 function getAllClients() {
@@ -50,18 +65,18 @@ function getClientById(id) {
   return getDb().prepare('SELECT * FROM clients WHERE id = ?').get(id);
 }
 
-function createClient({ name, business_type, location, brand_voice = '' }) {
+function createClient({ name, business_type, location, brand_voice = '', drive_photos_url = '', drive_output_url = '' }) {
   const stmt = getDb().prepare(
-    'INSERT INTO clients (name, business_type, location, brand_voice) VALUES (?, ?, ?, ?)'
+    'INSERT INTO clients (name, business_type, location, brand_voice, drive_photos_url, drive_output_url) VALUES (?, ?, ?, ?, ?, ?)'
   );
-  const result = stmt.run(name, business_type, location, brand_voice);
+  const result = stmt.run(name, business_type, location, brand_voice, drive_photos_url, drive_output_url);
   return getClientById(result.lastInsertRowid);
 }
 
-function updateClient(id, { name, business_type, location, brand_voice }) {
+function updateClient(id, { name, business_type, location, brand_voice, drive_photos_url = '', drive_output_url = '' }) {
   getDb().prepare(
-    'UPDATE clients SET name = ?, business_type = ?, location = ?, brand_voice = ? WHERE id = ?'
-  ).run(name, business_type, location, brand_voice, id);
+    'UPDATE clients SET name = ?, business_type = ?, location = ?, brand_voice = ?, drive_photos_url = ?, drive_output_url = ? WHERE id = ?'
+  ).run(name, business_type, location, brand_voice, drive_photos_url, drive_output_url, id);
   return getClientById(id);
 }
 
@@ -100,6 +115,29 @@ function getAllPosts() {
   `).all();
 }
 
+function getUsedPhotoIds(clientId) {
+  const jobs = getDb()
+    .prepare('SELECT selected_photos FROM media_jobs WHERE client_id = ?')
+    .all(clientId);
+  return jobs.flatMap(job => {
+    try { return JSON.parse(job.selected_photos).map(p => p.id); } catch (_) { return []; }
+  });
+}
+
+function createMediaJob({ clientId, selectedPhotos, script, higgsfieldPrompt, midjourneyPrompt }) {
+  const result = getDb()
+    .prepare(`INSERT INTO media_jobs (client_id, selected_photos, script, higgsfield_prompt, midjourney_prompt)
+              VALUES (?, ?, ?, ?, ?)`)
+    .run(clientId, selectedPhotos, script, higgsfieldPrompt, midjourneyPrompt);
+  return getDb().prepare('SELECT * FROM media_jobs WHERE id = ?').get(result.lastInsertRowid);
+}
+
+function getMediaJobsByClientId(clientId) {
+  return getDb()
+    .prepare('SELECT * FROM media_jobs WHERE client_id = ? ORDER BY created_at DESC')
+    .all(clientId);
+}
+
 function closeDb() {
   if (db) {
     db.close();
@@ -118,5 +156,8 @@ module.exports = {
   createPost,
   getPostsByClientId,
   getAllPosts,
+  getUsedPhotoIds,
+  createMediaJob,
+  getMediaJobsByClientId,
   closeDb,
 };
