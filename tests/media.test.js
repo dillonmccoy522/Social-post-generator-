@@ -22,6 +22,8 @@ const request = require('supertest');
 const app = require('../server');
 const db = require('../database');
 
+afterEach(() => db.closeDb());
+
 let clientId;
 beforeEach(() => {
   const c = db.createClient({ name: 'Test', business_type: 'Roofing', location: 'SA' });
