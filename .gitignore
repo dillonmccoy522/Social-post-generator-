@@ -2,3 +2,6 @@ node_modules/
 .env
 .env.local
 data/dashboard.db
+data/dashboard.db-shm
+data/dashboard.db-wal
+.superpowers/
