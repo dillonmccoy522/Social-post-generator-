@@ -9,6 +9,13 @@ const postsRouter = require('./routes/posts');
 const app = express();
 
 app.use(express.json());
+
+const { requireAuth } = require('./middleware/auth');
+const authRouter = require('./routes/auth');
+
+app.use(requireAuth);
+app.use('/api', authRouter);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
