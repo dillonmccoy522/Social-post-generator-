@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Niewdel — Sign in</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    body { display: flex; align-items: center; justify-content: center; }
+    .login-box { width: 340px; }
+  </style>
+</head>
+<body>
+  <div class="login-box card">
+    <div class="sidebar-logo" style="margin-bottom:16px;">Niewdel</div>
+    <label>Password</label>
+    <input type="password" id="password" autofocus />
+    <button class="btn btn-primary" id="login-btn" style="width:100%;margin-top:12px;">Sign in</button>
+    <div id="login-error" style="color:var(--accent);font-size:12.5px;margin-top:10px;display:none;">Wrong password.</div>
+  </div>
+  <script>
+    async function login() {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: document.getElementById('password').value }),
+      });
+      if (res.ok) { location.href = '/'; }
+      else { document.getElementById('login-error').style.display = 'block'; }
+    }
+    document.getElementById('login-btn').addEventListener('click', login);
+    document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+  </script>
+</body>
+</html>

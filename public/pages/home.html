@@ -1,0 +1,65 @@
+<div>
+  <div style="margin-bottom:36px;">
+    <div class="page-title">Home</div>
+    <div class="page-subtitle">Niewdel content operations at a glance.</div>
+  </div>
+
+  <div class="form-row" style="margin-bottom:24px;" id="stat-cards">
+    <div class="card"><div class="section-label">Active clients</div><div style="font-size:28px;font-weight:600;" id="stat-clients">—</div></div>
+    <div class="card"><div class="section-label">Posts this week</div><div style="font-size:28px;font-weight:600;" id="stat-posts">—</div></div>
+    <div class="card"><div class="section-label">Assets awaiting review</div><div style="font-size:28px;font-weight:600;" id="stat-draft">—</div></div>
+    <div class="card"><div class="section-label">Queued generations</div><div style="font-size:28px;font-weight:600;" id="stat-queued">—</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:24px;">
+    <div class="section-label">Recent activity</div>
+    <div id="activity"><div class="empty-state">Loading…</div></div>
+  </div>
+
+  <div class="form-row">
+    <div class="card">
+      <div class="section-label">Current priorities</div>
+      <div style="color:var(--text-secondary);font-size:13px;line-height:1.8;">
+        1. Client acquisition — pipeline &amp; outreach<br />
+        2. Service delivery — premium work for current clients<br />
+        3. Systems — build the AIOS so delivery scales
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-label">Team</div>
+      <div style="color:var(--text-secondary);font-size:13px;line-height:1.8;">
+        Dillon McCoy — Co-Founder, CGO<br />
+        Leddy — Co-Founder, Operations
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function esc(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+async function loadStats() {
+  const res = await fetch('/api/stats');
+  if (!res.ok) return;
+  const s = await res.json();
+  document.getElementById('stat-clients').textContent = s.clients;
+  document.getElementById('stat-posts').textContent = s.postsThisWeek;
+  document.getElementById('stat-draft').textContent = s.assetsByStatus.draft;
+  document.getElementById('stat-queued').textContent = s.assetsByStatus.queued + s.assetsByStatus.generating;
+
+  const act = document.getElementById('activity');
+  if (s.recentActivity.length === 0) {
+    act.innerHTML = '<div class="empty-state">No activity yet. Generate something from the Create tab.</div>';
+    return;
+  }
+  act.innerHTML = s.recentActivity.map(a => `
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
+      <div><span class="badge" style="margin-right:8px;">${esc(a.kind)}</span>${esc(a.client_name)} — ${esc(a.label)}</div>
+      <div style="color:var(--text-muted);">${esc((a.created_at || '').slice(0, 16))}</div>
+    </div>
+  `).join('');
+}
+loadStats();
+</script>

@@ -1,6 +1,9 @@
 const pages = {
-  generate: '/pages/generate.html',
+  home: '/pages/home.html',
   clients: '/pages/clients.html',
+  create: '/pages/create.html',
+  assets: '/pages/assets.html',
+  generate: '/pages/generate.html',
   history: '/pages/history.html',
 };
 
@@ -59,5 +62,8 @@ document.querySelectorAll('.nav-item').forEach(el => {
   });
 });
 
-// Default page
-loadPage('clients');
+// Auth check and default page
+fetch('/api/me').then(r => {
+  if (r.status === 401) { location.href = '/login.html'; return; }
+  loadPage('home');
+});
