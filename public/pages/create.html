@@ -1,10 +1,186 @@
 <div>
-  <div style="margin-bottom:36px;">
+  <div style="margin-bottom:24px;">
     <div class="page-title">Create</div>
-    <div class="page-subtitle">Generate new content for your clients.</div>
+    <div class="page-subtitle">Pick a client, grab a source photo from Drive, describe what you want. It lands in Assets when it's ready.</div>
   </div>
 
-  <div class="card">
-    <div class="empty-state">Create page coming soon.</div>
+  <div class="card" style="max-width:720px;">
+    <div class="form-row">
+      <div>
+        <label>Client</label>
+        <select id="c-client"></select>
+      </div>
+      <div>
+        <label>Campaign</label>
+        <input type="text" id="c-campaign" placeholder="e.g. ceramic-coating-july" />
+      </div>
+    </div>
+
+    <label>Source photo (optional)</label>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+      <button class="btn btn-secondary" id="pick-btn">Browse Drive…</button>
+      <div id="picked" style="display:none;align-items:center;gap:8px;">
+        <img id="picked-thumb" src="" alt="" style="height:44px;border-radius:6px;" />
+        <span id="picked-name" style="font-size:12.5px;color:var(--text-secondary);"></span>
+        <button class="btn btn-ghost btn-sm" id="clear-pick">✕</button>
+      </div>
+    </div>
+
+    <label>Prompt — what should this look like?</label>
+    <textarea id="c-prompt" placeholder="e.g. Turn this into a bold before/after style Instagram ad. Text hook: 'YOUR ROOF, 10 YEARS YOUNGER'. Brand: dependable, fair pricing."></textarea>
+
+    <div class="form-row">
+      <div>
+        <label>Type</label>
+        <select id="c-type">
+          <option value="image">Image</option>
+          <option value="video">Video</option>
+        </select>
+      </div>
+      <div>
+        <label>Aspect ratio</label>
+        <select id="c-aspect">
+          <option value="1:1">1:1 (feed)</option>
+          <option value="4:5">4:5 (portrait)</option>
+          <option value="9:16">9:16 (story/reel)</option>
+          <option value="16:9">16:9 (wide)</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="queue-btn">Generate</button>
+    <div style="color:var(--text-muted);font-size:11.5px;margin-top:10px;">
+      Queued generations are processed by Claude (or the Higgsfield API once connected) and appear in Assets.
+    </div>
+  </div>
+
+  <!-- DRIVE PICKER MODAL -->
+  <div id="picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:50;align-items:center;justify-content:center;">
+    <div class="card" style="width:640px;max-height:80vh;overflow:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="section-label" style="margin:0;">Pick a source photo</div>
+        <button class="btn btn-ghost btn-sm" id="picker-close">✕</button>
+      </div>
+      <div id="picker-crumbs" style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;"></div>
+      <div id="picker-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;">
+        <div class="empty-state">Loading…</div>
+      </div>
+    </div>
   </div>
 </div>
+
+<script>
+function esc(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function safeUrl(url) {
+  try {
+    const u = new URL(url);
+    return (u.protocol === 'https:' || u.protocol === 'http:') ? url : '#';
+  } catch { return '#'; }
+}
+
+let crumbs = [{ id: 'root', name: 'Drive' }];
+let picked = null;
+
+async function loadClientOptions() {
+  const res = await fetch('/api/clients');
+  const clients = await res.json();
+  document.getElementById('c-client').innerHTML =
+    clients.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+}
+
+async function openPicker(folderId) {
+  document.getElementById('picker').style.display = 'flex';
+  const grid = document.getElementById('picker-grid');
+  grid.innerHTML = '<div class="empty-state">Loading…</div>';
+  const res = await fetch('/api/drive/browse?folderId=' + encodeURIComponent(folderId));
+  if (res.status === 503) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">Google Drive isn\'t connected yet. Run scripts/google-oauth.js and set the env vars.</div>';
+    return;
+  }
+  if (!res.ok) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">Drive error — try again.</div>';
+    return;
+  }
+  const files = await res.json();
+  document.getElementById('picker-crumbs').innerHTML = crumbs
+    .map((c, i) => `<a href="#" data-crumb="${i}" style="color:var(--text-secondary);">${esc(c.name)}</a>`)
+    .join(' / ');
+  if (files.length === 0) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">Empty folder.</div>';
+    return;
+  }
+  grid.innerHTML = files.map(f => f.mimeType === 'application/vnd.google-apps.folder'
+    ? `<div class="card" style="cursor:pointer;text-align:center;padding:14px;" data-folder="${f.id}" data-name="${esc(f.name)}">📁<div style="font-size:11.5px;margin-top:6px;">${esc(f.name)}</div></div>`
+    : `<div class="card" style="cursor:pointer;padding:6px;text-align:center;" data-file="${f.id}" data-name="${esc(f.name)}" data-thumb="${esc(safeUrl(f.thumbnailLink || ''))}">
+        ${f.thumbnailLink ? `<img src="${esc(safeUrl(f.thumbnailLink))}" alt="" style="width:100%;height:80px;object-fit:cover;border-radius:6px;" />` : '🖼️'}
+        <div style="font-size:11px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(f.name)}</div>
+      </div>`
+  ).join('');
+}
+
+document.getElementById('pick-btn').addEventListener('click', () => {
+  crumbs = [{ id: 'root', name: 'Drive' }];
+  openPicker('root');
+});
+document.getElementById('picker-close').addEventListener('click', () => {
+  document.getElementById('picker').style.display = 'none';
+});
+document.getElementById('picker-crumbs').addEventListener('click', e => {
+  const a = e.target.closest('[data-crumb]');
+  if (!a) return;
+  e.preventDefault();
+  crumbs = crumbs.slice(0, Number(a.dataset.crumb) + 1);
+  openPicker(crumbs[crumbs.length - 1].id);
+});
+document.getElementById('picker-grid').addEventListener('click', e => {
+  const folder = e.target.closest('[data-folder]');
+  if (folder) {
+    crumbs.push({ id: folder.dataset.folder, name: folder.dataset.name });
+    openPicker(folder.dataset.folder);
+    return;
+  }
+  const file = e.target.closest('[data-file]');
+  if (file) {
+    picked = { id: file.dataset.file, name: file.dataset.name, thumb: file.dataset.thumb };
+    document.getElementById('picked').style.display = 'flex';
+    document.getElementById('picked-thumb').src = safeUrl(picked.thumb);
+    document.getElementById('picked-name').textContent = picked.name;
+    document.getElementById('picker').style.display = 'none';
+  }
+});
+document.getElementById('clear-pick').addEventListener('click', () => {
+  picked = null;
+  document.getElementById('picked').style.display = 'none';
+});
+
+document.getElementById('queue-btn').addEventListener('click', async () => {
+  const prompt = document.getElementById('c-prompt').value.trim();
+  if (!prompt) { showToast('Write a prompt first'); return; }
+  const aspect = document.getElementById('c-aspect').value;
+  const res = await fetch('/api/assets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: Number(document.getElementById('c-client').value),
+      campaign: document.getElementById('c-campaign').value.trim(),
+      type: document.getElementById('c-type').value,
+      prompt: `${prompt}\n\nAspect ratio: ${aspect}`,
+      status: 'queued',
+      source_drive_file_id: picked ? picked.id : null,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    showToast(err.error || 'Failed to queue');
+    return;
+  }
+  showToast('Queued — check the Assets tab');
+  document.getElementById('c-prompt').value = '';
+  document.getElementById('clear-pick').click();
+});
+
+loadClientOptions();
+</script>
