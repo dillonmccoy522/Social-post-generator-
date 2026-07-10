@@ -14,6 +14,7 @@ function getDb() {
     }
     db = new Database(DB_PATH);
     db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON');
     initSchema(db);
   }
   return db;
@@ -37,6 +38,24 @@ function initSchema(db) {
       week_of DATE NOT NULL,
       photo_descriptions TEXT NOT NULL,
       generated_content TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS assets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+      campaign TEXT NOT NULL DEFAULT '',
+      type TEXT NOT NULL CHECK (type IN ('image','video')),
+      status TEXT NOT NULL DEFAULT 'draft'
+        CHECK (status IN ('queued','generating','failed','draft','approved','posted')),
+      prompt TEXT NOT NULL DEFAULT '',
+      model TEXT NOT NULL DEFAULT '',
+      source_drive_file_id TEXT DEFAULT NULL,
+      output_drive_file_id TEXT DEFAULT NULL,
+      output_drive_url TEXT DEFAULT NULL,
+      thumbnail_url TEXT DEFAULT NULL,
+      higgsfield_job_id TEXT DEFAULT NULL,
+      error TEXT DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
@@ -100,6 +119,56 @@ function getAllPosts() {
   `).all();
 }
 
+const ASSET_UPDATE_FIELDS = ['campaign', 'status', 'prompt', 'model', 'source_drive_file_id',
+  'output_drive_file_id', 'output_drive_url', 'thumbnail_url', 'higgsfield_job_id', 'error'];
+
+function createAsset({ client_id, campaign = '', type, status = 'draft', prompt = '', model = '',
+  source_drive_file_id = null, output_drive_file_id = null, output_drive_url = null,
+  thumbnail_url = null, higgsfield_job_id = null }) {
+  const stmt = getDb().prepare(`
+    INSERT INTO assets (client_id, campaign, type, status, prompt, model, source_drive_file_id,
+      output_drive_file_id, output_drive_url, thumbnail_url, higgsfield_job_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const result = stmt.run(client_id, campaign, type, status, prompt, model, source_drive_file_id,
+    output_drive_file_id, output_drive_url, thumbnail_url, higgsfield_job_id);
+  return getAssetById(result.lastInsertRowid);
+}
+
+function getAssetById(id) {
+  return getDb().prepare(`
+    SELECT assets.*, clients.name AS client_name
+    FROM assets JOIN clients ON assets.client_id = clients.id
+    WHERE assets.id = ?
+  `).get(id);
+}
+
+function getAssets({ clientId, status, campaign } = {}) {
+  const where = [];
+  const params = [];
+  if (clientId) { where.push('assets.client_id = ?'); params.push(clientId); }
+  if (status) { where.push('assets.status = ?'); params.push(status); }
+  if (campaign) { where.push('assets.campaign = ?'); params.push(campaign); }
+  return getDb().prepare(`
+    SELECT assets.*, clients.name AS client_name
+    FROM assets JOIN clients ON assets.client_id = clients.id
+    ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+    ORDER BY assets.created_at DESC, assets.id DESC
+  `).all(...params);
+}
+
+function updateAsset(id, fields) {
+  const keys = Object.keys(fields).filter(k => ASSET_UPDATE_FIELDS.includes(k));
+  if (keys.length === 0) return getAssetById(id);
+  const set = keys.map(k => `${k} = ?`).join(', ');
+  getDb().prepare(`UPDATE assets SET ${set} WHERE id = ?`).run(...keys.map(k => fields[k]), id);
+  return getAssetById(id);
+}
+
+function deleteAsset(id) {
+  getDb().prepare('DELETE FROM assets WHERE id = ?').run(id);
+}
+
 function closeDb() {
   if (db) {
     db.close();
@@ -118,5 +187,10 @@ module.exports = {
   createPost,
   getPostsByClientId,
   getAllPosts,
+  createAsset,
+  getAssetById,
+  getAssets,
+  updateAsset,
+  deleteAsset,
   closeDb,
 };
