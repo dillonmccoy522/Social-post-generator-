@@ -35,7 +35,7 @@ async function ensureFolder(name, parentId) {
   const drive = getDrive();
   const escaped = name.replace(/'/g, "\\'");
   const { data } = await drive.files.list({
-    q: `'${parentId}' in parents and name = '${escaped}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+    q: `'${String(parentId).replace(/'/g, "\\'")}' in parents and name = '${escaped}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
     fields: 'files(id, name)',
     supportsAllDrives: true,
     includeItemsFromAllDrives: true,

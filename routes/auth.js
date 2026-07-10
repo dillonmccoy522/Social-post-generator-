@@ -7,9 +7,10 @@ router.post('/login', (req, res) => {
   if (!process.env.DASHBOARD_PASSWORD || password !== process.env.DASHBOARD_PASSWORD) {
     return res.status(401).json({ error: 'Invalid password' });
   }
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
   res.setHeader(
     'Set-Cookie',
-    `session=${sessionToken()}; HttpOnly; Path=/; Max-Age=2592000; SameSite=Lax`
+    `session=${sessionToken()}; HttpOnly; Path=/; Max-Age=2592000; SameSite=Lax${secure}`
   );
   res.status(204).send();
 });
