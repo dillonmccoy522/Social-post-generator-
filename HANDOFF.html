@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Niewdel Social Dashboard — Developer Handoff</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0A0A0C; color: #fff; padding: 40px; line-height: 1.6; }
+    .container { max-width: 860px; margin: 0 auto; }
+    h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { color: #888; margin-bottom: 40px; font-size: 15px; }
+    h2 { font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #C84B31; margin-bottom: 16px; margin-top: 40px; }
+    .card { background: #0f0f12; border: 1px solid #1e1e24; border-radius: 10px; padding: 24px; margin-bottom: 16px; }
+    .card h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .card p { color: #aaa; font-size: 14px; margin-bottom: 10px; }
+    .tag { display: inline-block; background: #1a1a20; border: 1px solid #2a2a32; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-family: monospace; color: #C84B31; margin-right: 6px; margin-bottom: 6px; }
+    .env-row { display: flex; align-items: flex-start; gap: 16px; padding: 12px 0; border-bottom: 1px solid #1e1e24; }
+    .env-row:last-child { border-bottom: none; }
+    .env-key { font-family: monospace; font-size: 13px; color: #C84B31; min-width: 220px; }
+    .env-desc { font-size: 14px; color: #aaa; }
+    .env-required { font-size: 11px; font-weight: 600; color: #fff; background: #C84B31; border-radius: 3px; padding: 1px 6px; margin-left: 8px; vertical-align: middle; }
+    .env-optional { font-size: 11px; font-weight: 600; color: #888; background: #1e1e24; border-radius: 3px; padding: 1px 6px; margin-left: 8px; vertical-align: middle; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; color: #888; font-weight: 500; padding: 8px 12px; border-bottom: 1px solid #1e1e24; }
+    td { padding: 10px 12px; border-bottom: 1px solid #1a1a20; color: #ccc; }
+    td:first-child { font-family: monospace; color: #fff; font-size: 13px; }
+    .badge { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 3px; font-weight: 600; }
+    .badge-green { background: #0d2b1a; color: #4ade80; border: 1px solid #166534; }
+    .badge-yellow { background: #2b2100; color: #fbbf24; border: 1px solid #854d0e; }
+    .note { background: #0f0f12; border-left: 3px solid #C84B31; padding: 14px 18px; border-radius: 0 8px 8px 0; font-size: 14px; color: #aaa; margin-top: 16px; }
+    .note strong { color: #fff; }
+    code { font-family: monospace; background: #1a1a20; padding: 2px 6px; border-radius: 3px; font-size: 13px; color: #C84B31; }
+    ul { padding-left: 20px; color: #aaa; font-size: 14px; }
+    ul li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <h1>Niewdel Social Dashboard</h1>
+    <p class="subtitle">Developer Handoff Document — Built 2026-07-05</p>
+
+    <!-- WHAT IT IS -->
+    <h2>What This Is</h2>
+    <div class="card">
+      <h3>Social Media Content Generator</h3>
+      <p>A web app for generating 3 social media posts per week for agency clients using Claude AI. Manages clients, generates Instagram/Facebook captions with hashtags and CTAs, and stores post history.</p>
+      <p><strong>Current state:</strong> Fully functional local app. Built to be migrated to a hosted environment (Railway).</p>
+    </div>
+
+    <!-- STACK -->
+    <h2>Tech Stack</h2>
+    <div class="card">
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Technology</th><th>Version</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Runtime</td><td>Node.js</td><td>≥ 18</td><td>Tested on v24</td></tr>
+          <tr><td>Framework</td><td>Express</td><td>^4.18</td><td>REST API + static file serving</td></tr>
+          <tr><td>Database</td><td>better-sqlite3</td><td>12.11.1</td><td>Local SQLite file at <code>data/dashboard.db</code></td></tr>
+          <tr><td>AI</td><td>@anthropic-ai/sdk</td><td>^0.26</td><td>Claude claude-sonnet-4-6 for post generation</td></tr>
+          <tr><td>Config</td><td>dotenv</td><td>^16.4</td><td>Loads <code>.env</code> at startup</td></tr>
+          <tr><td>Frontend</td><td>Vanilla HTML/CSS/JS</td><td>—</td><td>No build step, no framework</td></tr>
+          <tr><td>Tests</td><td>Jest + Supertest</td><td>29 / 7</td><td>27 tests, all passing</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- API KEYS -->
+    <h2>Environment Variables</h2>
+    <div class="card">
+      <div class="env-row">
+        <div class="env-key">ANTHROPIC_API_KEY <span class="env-required">REQUIRED</span></div>
+        <div class="env-desc">Anthropic API key for Claude post generation. Get from <strong>console.anthropic.com → API Keys</strong>. Used in <code>routes/generate.js</code>.</div>
+      </div>
+    </div>
+    <div class="note">
+      <strong>For Railway deployment:</strong> Add <code>ANTHROPIC_API_KEY</code> as an environment variable in the Railway project settings. Do not commit <code>.env</code> to git — it is gitignored.
+    </div>
+
+    <!-- FILE STRUCTURE -->
+    <h2>File Structure</h2>
+    <div class="card">
+      <table>
+        <thead>
+          <tr><th>Path</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>server.js</td><td>Express app entry point, route mounting, static serving</td></tr>
+          <tr><td>database.js</td><td>SQLite schema + all query helpers</td></tr>
+          <tr><td>routes/clients.js</td><td>CRUD API for clients</td></tr>
+          <tr><td>routes/generate.js</td><td>Claude AI post generation route</td></tr>
+          <tr><td>routes/posts.js</td><td>Post history retrieval</td></tr>
+          <tr><td>public/index.html</td><td>App shell with sidebar nav</td></tr>
+          <tr><td>public/styles.css</td><td>Global dark theme styles (Niewdel brand)</td></tr>
+          <tr><td>public/app.js</td><td>Client-side router (SPA page switching)</td></tr>
+          <tr><td>public/pages/clients.html</td><td>Clients management page</td></tr>
+          <tr><td>public/pages/generate.html</td><td>Post generation page</td></tr>
+          <tr><td>public/pages/history.html</td><td>Post history page</td></tr>
+          <tr><td>data/dashboard.db</td><td>SQLite database (gitignored, auto-created)</td></tr>
+          <tr><td>.env</td><td>Environment variables (gitignored)</td></tr>
+          <tr><td>tests/</td><td>Jest test suite (27 tests)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- DATABASE -->
+    <h2>Database Schema</h2>
+    <div class="card">
+      <h3>clients</h3>
+      <p>Stores agency clients.</p>
+      <table>
+        <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>id</td><td>INTEGER PK</td><td>Auto-increment</td></tr>
+          <tr><td>name</td><td>TEXT</td><td>Business name</td></tr>
+          <tr><td>business_type</td><td>TEXT</td><td>e.g. "Roofing"</td></tr>
+          <tr><td>location</td><td>TEXT</td><td>e.g. "San Antonio, TX"</td></tr>
+          <tr><td>brand_voice</td><td>TEXT</td><td>Optional tone/style notes</td></tr>
+          <tr><td>last_pillar</td><td>TEXT</td><td>Last content pillar used (for rotation)</td></tr>
+          <tr><td>created_at</td><td>DATETIME</td><td>Auto timestamp</td></tr>
+        </tbody>
+      </table>
+      <br>
+      <h3>posts</h3>
+      <p>Stores all generated post sets.</p>
+      <table>
+        <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>id</td><td>INTEGER PK</td><td>Auto-increment</td></tr>
+          <tr><td>client_id</td><td>INTEGER FK</td><td>References clients.id (CASCADE delete)</td></tr>
+          <tr><td>week_of</td><td>DATE</td><td>ISO date string</td></tr>
+          <tr><td>photo_descriptions</td><td>TEXT</td><td>JSON array of 3 descriptions</td></tr>
+          <tr><td>generated_content</td><td>TEXT</td><td>Full Claude output (all 3 posts)</td></tr>
+          <tr><td>created_at</td><td>DATETIME</td><td>Auto timestamp</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- API ROUTES -->
+    <h2>API Routes</h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>Method</th><th>Route</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>GET</td><td>/api/health</td><td>Health check → <code>{ status: 'ok' }</code></td></tr>
+          <tr><td>GET</td><td>/api/clients</td><td>List all clients</td></tr>
+          <tr><td>POST</td><td>/api/clients</td><td>Create client</td></tr>
+          <tr><td>GET</td><td>/api/clients/:id</td><td>Get single client</td></tr>
+          <tr><td>PUT</td><td>/api/clients/:id</td><td>Update client</td></tr>
+          <tr><td>DELETE</td><td>/api/clients/:id</td><td>Delete client + posts</td></tr>
+          <tr><td>POST</td><td>/api/generate</td><td>Generate posts via Claude</td></tr>
+          <tr><td>GET</td><td>/api/posts</td><td>All post history</td></tr>
+          <tr><td>GET</td><td>/api/posts?clientId=N</td><td>Posts filtered by client</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- DEPLOYMENT -->
+    <h2>Railway Deployment Notes</h2>
+    <div class="card">
+      <ul>
+        <li>Set <code>ANTHROPIC_API_KEY</code> in Railway environment variables</li>
+        <li>SQLite works on Railway but the database resets on each deploy — migrate to PostgreSQL for persistence</li>
+        <li>No build step needed — <code>npm start</code> runs the app directly</li>
+        <li>Port: app reads <code>process.env.PORT</code> with fallback to 3000 — Railway sets this automatically</li>
+        <li>The <code>data/</code> directory is auto-created on first run</li>
+      </ul>
+    </div>
+
+    <!-- PLANNED FEATURES -->
+    <h2>Planned Features (Not Yet Built)</h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>Feature</th><th>Status</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Google Drive Integration</td><td><span class="badge badge-yellow">Designed</span></td><td>Browse client photo folders, Claude vision auto-describes photos</td></tr>
+          <tr><td>Image Editor</td><td><span class="badge badge-yellow">Designed</span></td><td>Crop, brightness, contrast via canvas API</td></tr>
+          <tr><td>Metricool Direct Posting</td><td><span class="badge badge-yellow">Planned</span></td><td>Skip copy-paste, post directly from the app</td></tr>
+          <tr><td>Multi-user Auth</td><td><span class="badge badge-yellow">Planned</span></td><td>Currently no auth — needed before hosting publicly</td></tr>
+          <tr><td>PostgreSQL Migration</td><td><span class="badge badge-yellow">Planned</span></td><td>Replace SQLite for Railway persistence</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note" style="margin-top: 32px;">
+      <strong>Questions?</strong> Contact Dillon — dillon.mccoy522@gmail.com
+    </div>
+
+  </div>
+</body>
+</html>
