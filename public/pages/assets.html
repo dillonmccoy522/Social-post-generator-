@@ -1,10 +1,110 @@
 <div>
-  <div style="margin-bottom:36px;">
+  <div style="margin-bottom:24px;">
     <div class="page-title">Assets</div>
-    <div class="page-subtitle">Manage and review generated assets.</div>
+    <div class="page-subtitle">Every visual generated for every client. Review, approve, mark as posted.</div>
   </div>
 
-  <div class="card">
-    <div class="empty-state">Assets page coming soon.</div>
+  <div style="display:flex;gap:10px;margin-bottom:20px;">
+    <select id="filter-client"><option value="">All clients</option></select>
+    <select id="filter-status">
+      <option value="">All statuses</option>
+      <option value="queued">Queued</option>
+      <option value="generating">Generating</option>
+      <option value="failed">Failed</option>
+      <option value="draft">Draft</option>
+      <option value="approved">Approved</option>
+      <option value="posted">Posted</option>
+    </select>
+  </div>
+
+  <div id="asset-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;">
+    <div class="empty-state">Loading assets…</div>
   </div>
 </div>
+
+<script>
+function esc(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+const STATUS_ACTIONS = {
+  draft: [['approved', 'Approve']],
+  approved: [['posted', 'Mark posted'], ['draft', 'Back to draft']],
+  posted: [['draft', 'Back to draft']],
+  failed: [['queued', 'Retry (re-queue)']],
+  queued: [],
+  generating: [],
+};
+
+async function loadFilters() {
+  const res = await fetch('/api/clients');
+  const clients = await res.json();
+  document.getElementById('filter-client').innerHTML =
+    '<option value="">All clients</option>' +
+    clients.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+}
+
+async function loadAssets() {
+  const clientId = document.getElementById('filter-client').value;
+  const status = document.getElementById('filter-status').value;
+  const params = new URLSearchParams();
+  if (clientId) params.set('clientId', clientId);
+  if (status) params.set('status', status);
+  const res = await fetch('/api/assets?' + params.toString());
+  const assets = await res.json();
+  const grid = document.getElementById('asset-grid');
+  if (assets.length === 0) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">No assets match. Generate something from the Create tab.</div>';
+    return;
+  }
+  grid.innerHTML = assets.map(a => `
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="height:140px;background:var(--surface-raised);display:flex;align-items:center;justify-content:center;">
+        ${a.thumbnail_url
+          ? `<img src="${esc(a.thumbnail_url)}" alt="" style="width:100%;height:100%;object-fit:cover;" />`
+          : `<span style="font-size:32px;">${a.type === 'video' ? '🎬' : '🖼️'}</span>`}
+      </div>
+      <div style="padding:12px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:2px;">${esc(a.client_name)}</div>
+        <div style="color:var(--text-muted);font-size:11.5px;margin-bottom:6px;">${esc(a.type)}${a.campaign ? ' · ' + esc(a.campaign) : ''}</div>
+        <span class="badge">${esc(a.status)}</span>
+        ${a.error ? `<div style="color:var(--accent);font-size:11.5px;margin-top:6px;">${esc(a.error)}</div>` : ''}
+        ${a.prompt ? `<div style="color:var(--text-secondary);font-size:11.5px;margin-top:6px;max-height:44px;overflow:hidden;">${esc(a.prompt)}</div>` : ''}
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">
+          ${(STATUS_ACTIONS[a.status] || []).map(([to, label]) =>
+            `<button class="btn btn-secondary btn-sm" data-action="status" data-id="${a.id}" data-to="${to}">${label}</button>`).join('')}
+          ${a.output_drive_url ? `<a class="btn btn-ghost btn-sm" href="${esc(a.output_drive_url)}" target="_blank" rel="noopener">Drive ↗</a>` : ''}
+          <button class="btn btn-danger btn-sm" data-action="delete" data-id="${a.id}">Delete</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('filter-client').addEventListener('change', loadAssets);
+document.getElementById('filter-status').addEventListener('change', loadAssets);
+
+document.getElementById('asset-grid').addEventListener('click', async e => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  if (btn.dataset.action === 'status') {
+    const res = await fetch(`/api/assets/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: btn.dataset.to }),
+    });
+    if (!res.ok) { showToast('Failed to update asset'); return; }
+    showToast('Updated');
+    loadAssets();
+  } else if (btn.dataset.action === 'delete') {
+    if (!confirm('Delete this asset record? (The file in Drive is not deleted.)')) return;
+    const res = await fetch(`/api/assets/${id}`, { method: 'DELETE' });
+    if (!res.ok) { showToast('Failed to delete'); return; }
+    loadAssets();
+  }
+});
+
+loadFilters();
+loadAssets();
+</script>
