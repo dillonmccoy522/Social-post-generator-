@@ -34,6 +34,14 @@ function safeUrl(url) {
   } catch { return '#'; }
 }
 
+const STATUS_ICONS = {
+  queued: '/icons/status-queued.png',
+  generating: '/icons/status-generating.png',
+  draft: '/icons/status-draft.png',
+  approved: '/icons/status-approved.png',
+  posted: '/icons/status-posted.png',
+};
+
 const STATUS_ACTIONS = {
   draft: [['approved', 'Approve']],
   approved: [['posted', 'Mark posted'], ['draft', 'Back to draft']],
@@ -61,22 +69,22 @@ async function loadAssets() {
   const assets = await res.json();
   const grid = document.getElementById('asset-grid');
   if (assets.length === 0) {
-    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">No assets match. Generate something from the Create tab.</div>';
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><img src="/icons/empty-general.png" alt="" />No assets match. Generate something from the Create tab.</div>';
     return;
   }
   grid.innerHTML = assets.map(a => `
-    <div class="card" style="padding:0;overflow:hidden;">
-      <div style="height:140px;background:var(--surface-raised);display:flex;align-items:center;justify-content:center;">
+    <div class="card-cream" style="padding:0;overflow:hidden;">
+      <div style="height:140px;background:rgba(20,33,61,0.06);display:flex;align-items:center;justify-content:center;">
         ${a.thumbnail_url
           ? `<img src="${esc(safeUrl(a.thumbnail_url))}" alt="" style="width:100%;height:100%;object-fit:cover;" />`
           : `<span style="font-size:32px;">${a.type === 'video' ? '🎬' : '🖼️'}</span>`}
       </div>
       <div style="padding:12px;">
-        <div style="font-weight:600;font-size:13px;margin-bottom:2px;">${esc(a.client_name)}</div>
-        <div style="color:var(--text-muted);font-size:11.5px;margin-bottom:6px;">${esc(a.type)}${a.campaign ? ' · ' + esc(a.campaign) : ''}</div>
-        <span class="badge">${esc(a.status)}</span>
-        ${a.error ? `<div style="color:var(--accent);font-size:11.5px;margin-top:6px;">${esc(a.error)}</div>` : ''}
-        ${a.prompt ? `<div style="color:var(--text-secondary);font-size:11.5px;margin-top:6px;max-height:44px;overflow:hidden;">${esc(a.prompt)}</div>` : ''}
+        <div style="font-weight:700;font-size:13px;margin-bottom:2px;">${esc(a.client_name)}</div>
+        <div style="color:var(--cream-text-secondary);font-size:11.5px;margin-bottom:6px;">${esc(a.type)}${a.campaign ? ' · ' + esc(a.campaign) : ''}</div>
+        <span class="badge">${STATUS_ICONS[a.status] ? `<img src="${STATUS_ICONS[a.status]}" alt="" style="width:12px;height:12px;vertical-align:-2px;margin-right:4px;" />` : ''}${esc(a.status)}</span>
+        ${a.error ? `<div style="color:#c0392b;font-size:11.5px;margin-top:6px;">${esc(a.error)}</div>` : ''}
+        ${a.prompt ? `<div style="color:var(--cream-text-secondary);font-size:11.5px;margin-top:6px;max-height:44px;overflow:hidden;">${esc(a.prompt)}</div>` : ''}
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">
           ${(STATUS_ACTIONS[a.status] || []).map(([to, label]) =>
             `<button class="btn btn-secondary btn-sm" data-action="status" data-id="${a.id}" data-to="${to}">${label}</button>`).join('')}
