@@ -27,6 +27,13 @@ function esc(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+function safeUrl(url) {
+  try {
+    const u = new URL(url);
+    return (u.protocol === 'https:' || u.protocol === 'http:') ? url : '#';
+  } catch { return '#'; }
+}
+
 const STATUS_ACTIONS = {
   draft: [['approved', 'Approve']],
   approved: [['posted', 'Mark posted'], ['draft', 'Back to draft']],
@@ -61,7 +68,7 @@ async function loadAssets() {
     <div class="card" style="padding:0;overflow:hidden;">
       <div style="height:140px;background:var(--surface-raised);display:flex;align-items:center;justify-content:center;">
         ${a.thumbnail_url
-          ? `<img src="${esc(a.thumbnail_url)}" alt="" style="width:100%;height:100%;object-fit:cover;" />`
+          ? `<img src="${esc(safeUrl(a.thumbnail_url))}" alt="" style="width:100%;height:100%;object-fit:cover;" />`
           : `<span style="font-size:32px;">${a.type === 'video' ? '🎬' : '🖼️'}</span>`}
       </div>
       <div style="padding:12px;">
@@ -73,7 +80,7 @@ async function loadAssets() {
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">
           ${(STATUS_ACTIONS[a.status] || []).map(([to, label]) =>
             `<button class="btn btn-secondary btn-sm" data-action="status" data-id="${a.id}" data-to="${to}">${label}</button>`).join('')}
-          ${a.output_drive_url ? `<a class="btn btn-ghost btn-sm" href="${esc(a.output_drive_url)}" target="_blank" rel="noopener">Drive ↗</a>` : ''}
+          ${a.output_drive_url ? `<a class="btn btn-ghost btn-sm" href="${esc(safeUrl(a.output_drive_url))}" target="_blank" rel="noopener">Drive ↗</a>` : ''}
           <button class="btn btn-danger btn-sm" data-action="delete" data-id="${a.id}">Delete</button>
         </div>
       </div>
