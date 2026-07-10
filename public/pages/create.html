@@ -109,7 +109,7 @@ async function openPicker(folderId) {
     .map((c, i) => `<a href="#" data-crumb="${i}" style="color:var(--text-secondary);">${esc(c.name)}</a>`)
     .join(' / ');
   if (files.length === 0) {
-    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">Empty folder.</div>';
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><img src="/icons/empty-photos.png" alt="" />Empty folder.</div>';
     return;
   }
   grid.innerHTML = files.map(f => f.mimeType === 'application/vnd.google-apps.folder'
