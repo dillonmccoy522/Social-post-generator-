@@ -9,6 +9,13 @@ function sessionToken() {
     .digest('hex');
 }
 
+function safeEqual(a, b) {
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 function parseCookies(header) {
   const out = {};
   if (!header) return out;
@@ -25,13 +32,10 @@ function requireAuth(req, res, next) {
   if (PUBLIC_PATHS.has(req.path)) return next();
 
   const authHeader = req.headers.authorization || '';
-  if (process.env.API_TOKEN && authHeader === `Bearer ${process.env.API_TOKEN}`) return next();
+  if (process.env.API_TOKEN && safeEqual(authHeader, `Bearer ${process.env.API_TOKEN}`)) return next();
 
   const cookies = parseCookies(req.headers.cookie);
-  if (cookies.session && crypto.timingSafeEqual(
-    Buffer.from(cookies.session.padEnd(64).slice(0, 64)),
-    Buffer.from(sessionToken())
-  )) return next();
+  if (cookies.session && safeEqual(cookies.session, sessionToken())) return next();
 
   return res.status(401).json({ error: 'Unauthorized' });
 }
