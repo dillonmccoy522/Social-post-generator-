@@ -12,12 +12,15 @@
   </style>
 </head>
 <body>
-  <div class="login-box card">
-    <div class="sidebar-logo" style="margin-bottom:16px;">Niewdel</div>
-    <label>Password</label>
-    <input type="password" id="password" autofocus />
+  <div class="login-box card-cream">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;">
+      <div class="sidebar-logo-mark"></div>
+      <div class="sidebar-logo-text" style="color:var(--cream-text);">niewdel</div>
+    </div>
+    <label style="color:var(--cream-text-secondary);">Password</label>
+    <input type="password" id="password" autofocus style="background:#fff;border-color:rgba(20,33,61,0.15);color:var(--cream-text);" />
     <button class="btn btn-primary" id="login-btn" style="width:100%;margin-top:12px;">Sign in</button>
-    <div id="login-error" style="color:var(--accent);font-size:12.5px;margin-top:10px;display:none;">Wrong password.</div>
+    <div id="login-error" style="color:#c0392b;font-size:12.5px;margin-top:10px;display:none;">Wrong password.</div>
   </div>
   <script>
     async function login() {
