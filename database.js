@@ -169,6 +169,31 @@ function deleteAsset(id) {
   getDb().prepare('DELETE FROM assets WHERE id = ?').run(id);
 }
 
+function getStats() {
+  const d = getDb();
+  const clients = d.prepare('SELECT COUNT(*) AS n FROM clients').get().n;
+  const postsThisWeek = d.prepare(
+    "SELECT COUNT(*) AS n FROM posts WHERE created_at >= datetime('now', '-7 days')"
+  ).get().n;
+  const assetsByStatus = { queued: 0, generating: 0, failed: 0, draft: 0, approved: 0, posted: 0 };
+  for (const row of d.prepare('SELECT status, COUNT(*) AS n FROM assets GROUP BY status').all()) {
+    assetsByStatus[row.status] = row.n;
+  }
+  const recentActivity = d.prepare(`
+    SELECT * FROM (
+      SELECT 'post' AS kind, clients.name AS client_name,
+             'text posts · week of ' || posts.week_of AS label, posts.created_at
+      FROM posts JOIN clients ON posts.client_id = clients.id
+      UNION ALL
+      SELECT 'asset' AS kind, clients.name AS client_name,
+             assets.type || CASE WHEN assets.campaign != '' THEN ' · ' || assets.campaign ELSE '' END AS label,
+             assets.created_at
+      FROM assets JOIN clients ON assets.client_id = clients.id
+    ) ORDER BY created_at DESC LIMIT 10
+  `).all();
+  return { clients, postsThisWeek, assetsByStatus, recentActivity };
+}
+
 function closeDb() {
   if (db) {
     db.close();
@@ -192,5 +217,6 @@ module.exports = {
   getAssets,
   updateAsset,
   deleteAsset,
+  getStats,
   closeDb,
 };

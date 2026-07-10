@@ -6,6 +6,7 @@ const clientsRouter = require('./routes/clients');
 const generateRouter = require('./routes/generate');
 const postsRouter = require('./routes/posts');
 const assetsRouter = require('./routes/assets');
+const statsRouter = require('./routes/stats');
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use('/api/clients', clientsRouter);
 app.use('/api/generate', generateRouter);
 app.use('/api/posts', postsRouter);
 app.use('/api/assets', assetsRouter);
+app.use('/api/stats', statsRouter);
 
 // SPA fallback — serve index.html for any non-API route
 app.get('*', (req, res) => {
