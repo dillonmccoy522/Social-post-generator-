@@ -215,8 +215,8 @@ select { cursor: pointer; }
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: var(--accent-soft);
-  color: #8ab4e8;
+  background: #e3edfb;
+  color: #2563b0;
 }
 
 .badge-accent {
