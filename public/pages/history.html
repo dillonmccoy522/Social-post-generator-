@@ -55,7 +55,7 @@ async function loadHistory() {
     });
 
     if (posts.length === 0) {
-      list.innerHTML = '<div class="empty-state">No posts yet. Generate some content first.</div>';
+      list.innerHTML = '<div class="empty-state"><img src="/icons/empty-general.png" alt="" />No posts yet. Generate some content first.</div>';
       return;
     }
 
