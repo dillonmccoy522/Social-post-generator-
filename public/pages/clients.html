@@ -25,8 +25,10 @@
     <input type="text" id="f-location" placeholder="San Antonio, TX + northern areas" />
     <label>Brand Voice Notes</label>
     <textarea id="f-voice" placeholder="e.g. Friendly and direct. Emphasize 20+ years experience. Avoid corporate-speak."></textarea>
-    <label>Source Drive Folder Link</label>
-    <input type="text" id="f-drive-link" placeholder="https://drive.google.com/drive/folders/..." />
+    <label>📥 Pull-from folder <span style="color:var(--text-muted);font-weight:400;">— where Higgsfield pulls photos from</span></label>
+    <input type="text" id="f-source-link" placeholder="https://drive.google.com/drive/folders/..." />
+    <label>📤 Send-to folder <span style="color:var(--text-muted);font-weight:400;">— where Higgsfield saves what it makes</span></label>
+    <input type="text" id="f-output-link" placeholder="https://drive.google.com/drive/folders/..." />
     <div style="display:flex;gap:10px;">
       <button class="btn btn-primary" id="save-btn">Save Client</button>
       <button class="btn btn-ghost" id="cancel-btn">Cancel</button>
@@ -49,35 +51,43 @@ function safeUrl(url) {
   } catch { return '#'; }
 }
 
+function folderUrl(id) {
+  return safeUrl('https://drive.google.com/drive/folders/' + id);
+}
+
+let clientsCache = [];
+
 async function loadClients() {
   const res = await fetch('/api/clients');
-  const clients = await res.json();
+  clientsCache = await res.json();
   const list = document.getElementById('client-list');
-  if (clients.length === 0) {
+  if (clientsCache.length === 0) {
     list.innerHTML = '<div class="empty-state">No clients yet. Add your first client above.</div>';
     return;
   }
-  list.innerHTML = clients.map(c => `
+  list.innerHTML = clientsCache.map(c => `
     <div class="card" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
-      <div>
+      <div style="min-width:0;">
         <div style="font-weight:600;margin-bottom:4px;">${esc(c.name)}</div>
         <div style="color:var(--text-muted);font-size:12px;">${esc(c.business_type)} · ${esc(c.location)}</div>
         ${c.last_pillar ? `<span class="badge" style="margin-top:8px;display:inline-block;">${esc(c.last_pillar)}</span>` : ''}
         ${c.brand_voice ? `<div style="color:var(--text-secondary);font-size:12.5px;margin-top:6px;">${esc(c.brand_voice)}</div>` : ''}
-        <div style="display:flex;gap:12px;margin-top:8px;">
-          ${c.source_drive_folder_id ? `<a class="btn btn-ghost btn-sm" href="${esc(safeUrl('https://drive.google.com/drive/folders/' + c.source_drive_folder_id))}" target="_blank" rel="noopener">Source ↗</a>` : ''}
-          ${c.output_drive_folder_id ? `<a class="btn btn-ghost btn-sm" href="${esc(safeUrl('https://drive.google.com/drive/folders/' + c.output_drive_folder_id))}" target="_blank" rel="noopener">Output ↗</a>` : ''}
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:12.5px;color:var(--text-secondary);">
+          <div>📥 Pull-from: ${c.source_drive_folder_id
+            ? `<a href="${esc(folderUrl(c.source_drive_folder_id))}" target="_blank" rel="noopener" style="color:var(--accent);">Open folder ↗</a>`
+            : `<button class="btn btn-ghost btn-sm" data-action="edit" data-id="${c.id}">+ Add pull-from folder</button>`}</div>
+          <div>📤 Send-to: ${c.output_drive_folder_id
+            ? `<a href="${esc(folderUrl(c.output_drive_folder_id))}" target="_blank" rel="noopener" style="color:var(--accent);">Open folder ↗</a>`
+            : `<button class="btn btn-ghost btn-sm" data-action="edit" data-id="${c.id}">+ Add send-to folder</button>`}</div>
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;">
-        <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${c.id}" data-name="${esc(c.name)}" data-type="${esc(c.business_type)}" data-location="${esc(c.location)}" data-voice="${esc(c.brand_voice || '')}" data-source-folder="${esc(c.source_drive_folder_id || '')}">Edit</button>
+        <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${c.id}">Edit</button>
         <button class="btn btn-danger btn-sm" data-action="delete" data-id="${c.id}">Delete</button>
       </div>
     </div>
   `).join('');
 }
-
-function escQ(str) { return String(str || '').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, ''); }
 
 function showForm(label = 'New Client') {
   document.getElementById('client-form').style.display = 'block';
@@ -87,16 +97,19 @@ function showForm(label = 'New Client') {
 function hideForm() {
   document.getElementById('client-form').style.display = 'none';
   document.getElementById('edit-id').value = '';
-  ['f-name','f-type','f-location','f-voice','f-drive-link'].forEach(id => document.getElementById(id).value = '');
+  ['f-name','f-type','f-location','f-voice','f-source-link','f-output-link'].forEach(id => document.getElementById(id).value = '');
 }
 
-function editClient(id, name, type, location, voice, sourceFolderId) {
-  document.getElementById('edit-id').value = id;
-  document.getElementById('f-name').value = name;
-  document.getElementById('f-type').value = type;
-  document.getElementById('f-location').value = location;
-  document.getElementById('f-voice').value = voice;
-  document.getElementById('f-drive-link').value = sourceFolderId ? `https://drive.google.com/drive/folders/${sourceFolderId}` : '';
+function editClient(id) {
+  const c = clientsCache.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('edit-id').value = c.id;
+  document.getElementById('f-name').value = c.name;
+  document.getElementById('f-type').value = c.business_type;
+  document.getElementById('f-location').value = c.location;
+  document.getElementById('f-voice').value = c.brand_voice || '';
+  document.getElementById('f-source-link').value = c.source_drive_folder_id ? `https://drive.google.com/drive/folders/${c.source_drive_folder_id}` : '';
+  document.getElementById('f-output-link').value = c.output_drive_folder_id ? `https://drive.google.com/drive/folders/${c.output_drive_folder_id}` : '';
   showForm('Edit Client');
   document.getElementById('client-form').scrollIntoView({ behavior: 'smooth' });
 }
@@ -108,7 +121,8 @@ async function saveClient() {
     business_type: document.getElementById('f-type').value.trim(),
     location: document.getElementById('f-location').value.trim(),
     brand_voice: document.getElementById('f-voice').value.trim(),
-    source_drive_folder_id: document.getElementById('f-drive-link').value.trim(),
+    source_drive_folder_id: document.getElementById('f-source-link').value.trim(),
+    output_drive_folder_id: document.getElementById('f-output-link').value.trim(),
   };
   if (!body.name || !body.business_type || !body.location) {
     showToast('Name, business type, and location are required');
@@ -141,7 +155,7 @@ async function deleteClient(id) {
 loadClients();
 
 // Wire up static button handlers
-document.getElementById('add-btn').addEventListener('click', showForm);
+document.getElementById('add-btn').addEventListener('click', () => showForm());
 document.getElementById('save-btn').addEventListener('click', saveClient);
 document.getElementById('cancel-btn').addEventListener('click', hideForm);
 
@@ -152,7 +166,7 @@ document.getElementById('client-list').addEventListener('click', function(e) {
   const action = btn.dataset.action;
   const id = parseInt(btn.dataset.id, 10);
   if (action === 'edit') {
-    editClient(id, btn.dataset.name, btn.dataset.type, btn.dataset.location, btn.dataset.voice, btn.dataset.sourceFolder);
+    editClient(id);
   } else if (action === 'delete') {
     deleteClient(id);
   }
