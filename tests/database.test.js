@@ -105,6 +105,42 @@ test('setClientOutputFolder sets output_drive_folder_id', () => {
   expect(updated.id).toBe(client.id);
 });
 
+test('createClient accepts and stores output_drive_folder_id', () => {
+  const client = db.createClient({
+    name: 'Output Store',
+    business_type: 'Roofing',
+    location: 'San Antonio, TX',
+    output_drive_folder_id: 'out123',
+  });
+  expect(client.output_drive_folder_id).toBe('out123');
+});
+
+test('createClient defaults output_drive_folder_id to null when omitted', () => {
+  const client = db.createClient({
+    name: 'No Output',
+    business_type: 'HVAC',
+    location: 'Austin, TX',
+  });
+  expect(client.output_drive_folder_id).toBeNull();
+});
+
+test('updateClient updates output_drive_folder_id', () => {
+  const client = db.createClient({
+    name: 'Up Output',
+    business_type: 'Roofing',
+    location: 'Dallas, TX',
+  });
+  const updated = db.updateClient(client.id, {
+    name: 'Up Output',
+    business_type: 'Roofing',
+    location: 'Dallas, TX',
+    brand_voice: '',
+    source_drive_folder_id: null,
+    output_drive_folder_id: 'newout',
+  });
+  expect(updated.output_drive_folder_id).toBe('newout');
+});
+
 test('createPost and getPostsByClientId', () => {
   const client = db.createClient({
     name: 'Post Test',
