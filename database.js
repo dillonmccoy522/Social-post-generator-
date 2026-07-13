@@ -82,18 +82,18 @@ function getClientById(id) {
   return getDb().prepare('SELECT * FROM clients WHERE id = ?').get(id);
 }
 
-function createClient({ name, business_type, location, brand_voice = '', source_drive_folder_id = null }) {
+function createClient({ name, business_type, location, brand_voice = '', source_drive_folder_id = null, output_drive_folder_id = null }) {
   const stmt = getDb().prepare(
-    'INSERT INTO clients (name, business_type, location, brand_voice, source_drive_folder_id) VALUES (?, ?, ?, ?, ?)'
+    'INSERT INTO clients (name, business_type, location, brand_voice, source_drive_folder_id, output_drive_folder_id) VALUES (?, ?, ?, ?, ?, ?)'
   );
-  const result = stmt.run(name, business_type, location, brand_voice, source_drive_folder_id);
+  const result = stmt.run(name, business_type, location, brand_voice, source_drive_folder_id, output_drive_folder_id);
   return getClientById(result.lastInsertRowid);
 }
 
-function updateClient(id, { name, business_type, location, brand_voice, source_drive_folder_id = null }) {
+function updateClient(id, { name, business_type, location, brand_voice, source_drive_folder_id = null, output_drive_folder_id = null }) {
   getDb().prepare(
-    'UPDATE clients SET name = ?, business_type = ?, location = ?, brand_voice = ?, source_drive_folder_id = ? WHERE id = ?'
-  ).run(name, business_type, location, brand_voice, source_drive_folder_id, id);
+    'UPDATE clients SET name = ?, business_type = ?, location = ?, brand_voice = ?, source_drive_folder_id = ?, output_drive_folder_id = ? WHERE id = ?'
+  ).run(name, business_type, location, brand_voice, source_drive_folder_id, output_drive_folder_id, id);
   return getClientById(id);
 }
 
