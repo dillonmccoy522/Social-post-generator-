@@ -73,3 +73,33 @@ test('ensureFolder creates when missing', async () => {
   const id = await drive.ensureFolder('Acme', 'root-id');
   expect(id).toBe('new-folder');
 });
+
+test('parseFolderId extracts id from a full folder URL', () => {
+  expect(drive.parseFolderId('https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUvWxYz'))
+    .toBe('1AbCdEfGhIjKlMnOpQrStUvWxYz');
+});
+
+test('parseFolderId extracts id from a folder URL with query string', () => {
+  expect(drive.parseFolderId('https://drive.google.com/drive/folders/1AbCdEf?usp=sharing'))
+    .toBe('1AbCdEf');
+});
+
+test('parseFolderId extracts id from a /u/0/folders/ URL variant', () => {
+  expect(drive.parseFolderId('https://drive.google.com/drive/u/0/folders/1AbCdEf'))
+    .toBe('1AbCdEf');
+});
+
+test('parseFolderId accepts a bare folder id', () => {
+  expect(drive.parseFolderId('1AbCdEfGhIjKlMnOpQrStUvWxYz')).toBe('1AbCdEfGhIjKlMnOpQrStUvWxYz');
+});
+
+test('parseFolderId returns null for empty input', () => {
+  expect(drive.parseFolderId('')).toBeNull();
+  expect(drive.parseFolderId(null)).toBeNull();
+  expect(drive.parseFolderId(undefined)).toBeNull();
+});
+
+test('parseFolderId returns null for unrecognizable input', () => {
+  expect(drive.parseFolderId('not a link at all, just words')).toBeNull();
+  expect(drive.parseFolderId('https://example.com/not-drive')).toBeNull();
+});

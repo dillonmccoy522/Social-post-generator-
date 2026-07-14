@@ -5,6 +5,16 @@ function isConfigured() {
   return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REFRESH_TOKEN);
 }
 
+function parseFolderId(input) {
+  if (!input) return null;
+  const trimmed = String(input).trim();
+  if (!trimmed) return null;
+  const urlMatch = trimmed.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  if (urlMatch) return urlMatch[1];
+  if (/^[a-zA-Z0-9_-]+$/.test(trimmed)) return trimmed;
+  return null;
+}
+
 function getDrive() {
   const auth = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
   auth.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN });
@@ -69,4 +79,4 @@ async function uploadFromUrl(url, filename, clientName, campaign) {
   return created.data;
 }
 
-module.exports = { isConfigured, browse, ensureFolder, uploadFromUrl };
+module.exports = { isConfigured, parseFolderId, browse, ensureFolder, uploadFromUrl };
