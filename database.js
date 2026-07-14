@@ -29,6 +29,8 @@ function initSchema(db) {
       location TEXT NOT NULL,
       brand_voice TEXT DEFAULT '',
       last_pillar TEXT DEFAULT NULL,
+      source_drive_folder_id TEXT DEFAULT NULL,
+      output_drive_folder_id TEXT DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -59,6 +61,17 @@ function initSchema(db) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  migrateClientsDriveColumns(db);
+}
+
+function migrateClientsDriveColumns(db) {
+  const columns = db.prepare('PRAGMA table_info(clients)').all().map(c => c.name);
+  if (!columns.includes('source_drive_folder_id')) {
+    db.exec('ALTER TABLE clients ADD COLUMN source_drive_folder_id TEXT DEFAULT NULL');
+  }
+  if (!columns.includes('output_drive_folder_id')) {
+    db.exec('ALTER TABLE clients ADD COLUMN output_drive_folder_id TEXT DEFAULT NULL');
+  }
 }
 
 function getAllClients() {
@@ -69,18 +82,23 @@ function getClientById(id) {
   return getDb().prepare('SELECT * FROM clients WHERE id = ?').get(id);
 }
 
-function createClient({ name, business_type, location, brand_voice = '' }) {
+function createClient({ name, business_type, location, brand_voice = '', source_drive_folder_id = null }) {
   const stmt = getDb().prepare(
-    'INSERT INTO clients (name, business_type, location, brand_voice) VALUES (?, ?, ?, ?)'
+    'INSERT INTO clients (name, business_type, location, brand_voice, source_drive_folder_id) VALUES (?, ?, ?, ?, ?)'
   );
-  const result = stmt.run(name, business_type, location, brand_voice);
+  const result = stmt.run(name, business_type, location, brand_voice, source_drive_folder_id);
   return getClientById(result.lastInsertRowid);
 }
 
-function updateClient(id, { name, business_type, location, brand_voice }) {
+function updateClient(id, { name, business_type, location, brand_voice, source_drive_folder_id = null }) {
   getDb().prepare(
-    'UPDATE clients SET name = ?, business_type = ?, location = ?, brand_voice = ? WHERE id = ?'
-  ).run(name, business_type, location, brand_voice, id);
+    'UPDATE clients SET name = ?, business_type = ?, location = ?, brand_voice = ?, source_drive_folder_id = ? WHERE id = ?'
+  ).run(name, business_type, location, brand_voice, source_drive_folder_id, id);
+  return getClientById(id);
+}
+
+function setClientOutputFolder(id, folderId) {
+  getDb().prepare('UPDATE clients SET output_drive_folder_id = ? WHERE id = ?').run(folderId, id);
   return getClientById(id);
 }
 
@@ -209,6 +227,7 @@ module.exports = {
   updateClient,
   deleteClient,
   updateClientLastPillar,
+  setClientOutputFolder,
   createPost,
   getPostsByClientId,
   getAllPosts,
