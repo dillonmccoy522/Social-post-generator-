@@ -14,39 +14,40 @@ A small MCP server that connects Claude (phone, iPad, computer) to **your** Goog
 
 ## One-time setup
 
+Everything below works from a phone or iPad browser — no computer required.
+
 ### 1. Google Cloud (5 min)
 
 In [Google Cloud Console](https://console.cloud.google.com) (same project as the dashboard's Drive setup is fine):
 
 1. **APIs & Services → Library** — enable **Google Tasks API** and **Google Calendar API**.
-2. **APIs & Services → Credentials** — you can reuse the existing OAuth "Web application" client. Add redirect URI `http://localhost:53683/callback`.
+2. **APIs & Services → Credentials** — you can reuse the existing OAuth "Web application" client. After Railway gives you a domain (step 2), add redirect URI `https://<your-railway-domain>/oauth/callback`.
 
-### 2. Get a refresh token
+### 2. Deploy on Railway
 
-```bash
-cd task-bridge
-cp .env.example .env         # fill in GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET
-npm install
-node scripts/google-oauth.js # sign in with YOUR Google account (the one with your Tasks)
+New Railway service from this repo with **Root Directory** set to `task-bridge/`. Set variables:
+
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — from the OAuth client above
+- `MCP_SECRET` — a long random string (a password manager's generated password works fine). The bridge's endpoint is `/mcp/<that secret>`; the secret in the URL is what keeps strangers out, so treat the full URL like a password.
+- `BRIDGE_TZ` — e.g. `America/Chicago`
+
+Railway sets `PORT` automatically. Health check path: `/health`.
+
+### 3. Sign in with Google (in the browser)
+
+Visit:
+
+```
+https://<your-railway-domain>/setup/<MCP_SECRET>
 ```
 
-Copy the printed `GOOGLE_REFRESH_TOKEN` into `.env`.
+Tap **Connect Google**, sign in with the account whose Tasks/Calendar you use, and the page hands you a `GOOGLE_REFRESH_TOKEN` value to paste into Railway's variables. After the redeploy, that same setup page shows your finished Claude connector URL.
 
 > The dashboard's existing refresh token won't work here — it only has Drive permission. This one adds Tasks + Calendar.
+>
+> Prefer a terminal? `node scripts/google-oauth.js` still works as a local alternative (redirect URI `http://localhost:53683/callback`).
 
-### 3. Generate the endpoint secret
-
-```bash
-node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"
-```
-
-Put the output in `.env` as `MCP_SECRET`. The bridge's endpoint is `/mcp/<that secret>` — the secret in the URL is what keeps strangers out, so treat the full URL like a password.
-
-### 4. Deploy on Railway
-
-New Railway service from this repo with **Root Directory** set to `task-bridge/`. Set the variables from `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `MCP_SECRET`, `BRIDGE_TZ`). Railway sets `PORT` automatically. Health check path: `/health`.
-
-### 5. Connect it to Claude
+### 4. Connect it to Claude
 
 On claude.ai → **Settings → Connectors → Add custom connector**, paste:
 
@@ -56,7 +57,7 @@ https://<your-railway-domain>/mcp/<MCP_SECRET>
 
 No OAuth screen will appear — the secret URL is the credential. Once added, the connector is available in the Claude apps on your phone, iPad, and computer.
 
-### 6. Make sure the buzzing works
+### 5. Make sure the buzzing works
 
 Install the **Google Tasks** app on phone + iPad and allow notifications. The **Google Calendar** app handles timed alerts. That's the whole notification system — nothing to build or maintain.
 
