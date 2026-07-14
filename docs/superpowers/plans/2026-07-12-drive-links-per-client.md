@@ -33,7 +33,7 @@
 - Produces: `setClientOutputFolder(id, folderId)` — new function, returns the updated client record. Later tasks (Task 3) call this by this exact name.
 - Produces: `clients` rows now include `source_drive_folder_id` and `output_drive_folder_id` (both `TEXT`, nullable).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `tests/database.test.js` (after the existing `updateClientLastPillar` test):
 
@@ -86,12 +86,12 @@ test('setClientOutputFolder sets output_drive_folder_id', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd "/Users/dillonmccoy/Niewdel /social-dashboard" && npx jest tests/database.test.js -t "source_drive_folder_id|setClientOutputFolder" -v`
 Expected: FAIL — `db.createClient(...)` returns a client with `source_drive_folder_id: undefined` (column doesn't exist yet, or the field isn't passed through), and `db.setClientOutputFolder` throws `TypeError: db.setClientOutputFolder is not a function`.
 
-- [ ] **Step 3: Add the migration and extend the functions**
+- [x] **Step 3: Add the migration and extend the functions**
 
 In `database.js`, replace the `initSchema` function:
 
@@ -200,17 +200,17 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd "/Users/dillonmccoy/Niewdel /social-dashboard" && npx jest tests/database.test.js -v`
 Expected: all tests in the file PASS, including the 4 new ones.
 
-- [ ] **Step 5: Run the full suite to check for regressions**
+- [x] **Step 5: Run the full suite to check for regressions**
 
 Run: `cd "/Users/dillonmccoy/Niewdel /social-dashboard" && npm test`
 Expected: `Tests: 54 passed, 54 total` (50 existing + 4 new).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd "/Users/dillonmccoy/Niewdel /social-dashboard"
@@ -230,7 +230,7 @@ git commit -m "feat: add source/output Drive folder fields to clients table"
 - Consumes: nothing new.
 - Produces: `parseFolderId(input)` — pure function, exported from `services/drive.js`. Returns a folder ID string, or `null` if `input` is empty/unparseable. Task 3 imports and calls this exact function.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `tests/drive.test.js` (after the existing `ensureFolder creates when missing` test — no `configure()` call needed since this is a pure function, no Drive API involved):
 
@@ -266,12 +266,12 @@ test('parseFolderId returns null for unrecognizable input', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd "/Users/dillonmccoy/Niewdel /social-dashboard" && npx jest tests/drive.test.js -t "parseFolderId" -v`
 Expected: FAIL with `TypeError: drive.parseFolderId is not a function`.
 
-- [ ] **Step 3: Implement `parseFolderId`**
+- [x] **Step 3: Implement `parseFolderId`**
 
 In `services/drive.js`, add this function right after `isConfigured` (before `getDrive`):
 
@@ -293,17 +293,17 @@ Update the final export line:
 module.exports = { isConfigured, parseFolderId, browse, ensureFolder, uploadFromUrl };
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd "/Users/dillonmccoy/Niewdel /social-dashboard" && npx jest tests/drive.test.js -v`
 Expected: all tests in the file PASS, including the 6 new ones.
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `cd "/Users/dillonmccoy/Niewdel /social-dashboard" && npm test`
 Expected: `Tests: 60 passed, 60 total` (54 from Task 1 + 6 new).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd "/Users/dillonmccoy/Niewdel /social-dashboard"
@@ -323,7 +323,7 @@ git commit -m "feat: add parseFolderId helper for Drive folder links"
 - Consumes: `db.createClient`, `db.updateClient`, `db.setClientOutputFolder` (Task 1); `drive.parseFolderId`, `drive.isConfigured`, `drive.ensureFolder` (Task 2 + existing).
 - Produces: `POST /api/clients` and `PUT /api/clients/:id` now accept `source_drive_folder_id` (a raw pasted link or bare ID) in the request body; `POST` additionally attempts eager output-folder creation.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add this Drive mock setup to the top of `tests/clients.test.js` (this file currently has no Drive mocking — this mirrors the exact pattern already used in `tests/drive.test.js`), replacing the first 4 lines:
 
@@ -496,12 +496,12 @@ test('PUT /api/clients/:id does not touch output_drive_folder_id', async () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd "/Users/dillonmccoy/Niewdel /social-dashboard" && npx jest tests/clients.test.js -v`
 Expected: the new tests FAIL — `res.body.source_drive_folder_id` is `undefined` (route doesn't read or validate it yet), `res.status` is `201` instead of `400` for the bad-link tests.
 
-- [ ] **Step 3: Update the route**
+- [x] **Step 3: Update the route**
 
 Replace the full contents of `routes/clients.js`:
 
@@ -579,17 +579,17 @@ router.delete('/:id', (req, res) => {
 module.exports = router;
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd "/Users/dillonmccoy/Niewdel /social-dashboard" && npx jest tests/clients.test.js -v`
 Expected: all tests in the file PASS, including the 9 new ones.
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `cd "/Users/dillonmccoy/Niewdel /social-dashboard" && npm test`
 Expected: `Tests: 69 passed, 69 total` (60 from Task 2 + 9 new).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd "/Users/dillonmccoy/Niewdel /social-dashboard"
@@ -608,7 +608,7 @@ git commit -m "feat: validate and store client Drive links, eager-create output 
 - Consumes: `POST /api/clients` and `PUT /api/clients/:id` now accept/return `source_drive_folder_id` and `output_drive_folder_id` (Task 3).
 - No new interfaces produced — this is a leaf UI task.
 
-- [ ] **Step 1: Add the form field**
+- [x] **Step 1: Add the form field**
 
 In `public/pages/clients.html`, replace:
 
@@ -628,7 +628,7 @@ With:
     <div style="display:flex;gap:10px;">
 ```
 
-- [ ] **Step 2: Add the `safeUrl` helper**
+- [x] **Step 2: Add the `safeUrl` helper**
 
 Replace:
 
@@ -659,7 +659,7 @@ function safeUrl(url) {
 async function loadClients() {
 ```
 
-- [ ] **Step 3: Show the Source/Output links and pass the source folder id through to Edit**
+- [x] **Step 3: Show the Source/Output links and pass the source folder id through to Edit**
 
 Replace:
 
@@ -703,7 +703,7 @@ With:
   `).join('');
 ```
 
-- [ ] **Step 4: Clear the new field on hide, and populate it on edit**
+- [x] **Step 4: Clear the new field on hide, and populate it on edit**
 
 Replace:
 
@@ -746,7 +746,7 @@ function editClient(id, name, type, location, voice, sourceFolderId) {
 }
 ```
 
-- [ ] **Step 5: Send the field in `saveClient`, and pass it through the edit-button delegation**
+- [x] **Step 5: Send the field in `saveClient`, and pass it through the edit-button delegation**
 
 Replace:
 
@@ -791,7 +791,7 @@ With:
   } else if (action === 'delete') {
 ```
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 ```bash
 cd "/Users/dillonmccoy/Niewdel /social-dashboard" && npm start &
@@ -803,7 +803,7 @@ npm test
 ```
 Expected: both greps return `1` or more, and `Tests: 69 passed, 69 total` (unchanged from Task 3 — this is a markup/JS-only change with no new automated tests, consistent with this app having zero frontend test coverage).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd "/Users/dillonmccoy/Niewdel /social-dashboard"
@@ -821,7 +821,7 @@ git commit -m "feat: add Drive folder link field and display to Clients page"
 **Interfaces:**
 - Consumes: `GET /api/clients` response now includes `source_drive_folder_id` per client (Task 1/3, already returned by `getAllClients()` since it does `SELECT *`).
 
-- [ ] **Step 1: Keep the fetched client list in memory**
+- [x] **Step 1: Keep the fetched client list in memory**
 
 Replace:
 
@@ -852,7 +852,7 @@ async function loadClientOptions() {
 }
 ```
 
-- [ ] **Step 2: Default the Browse Drive button to the selected client's source folder**
+- [x] **Step 2: Default the Browse Drive button to the selected client's source folder**
 
 Replace:
 
@@ -878,7 +878,7 @@ document.getElementById('pick-btn').addEventListener('click', () => {
 });
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 ```bash
 cd "/Users/dillonmccoy/Niewdel /social-dashboard" && npm start &
@@ -889,7 +889,7 @@ npm test
 ```
 Expected: grep returns `1` or more, `Tests: 69 passed, 69 total` (unchanged — no new automated tests for this page-fragment-only change).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd "/Users/dillonmccoy/Niewdel /social-dashboard"
@@ -904,14 +904,14 @@ git commit -m "feat: Create page Browse Drive jumps to client's source folder"
 **Files:**
 - None modified — this is the acceptance checkpoint for the whole feature.
 
-- [ ] **Step 1: Run the full test suite**
+- [x] **Step 1: Run the full test suite**
 
 ```bash
 cd "/Users/dillonmccoy/Niewdel /social-dashboard" && npm test
 ```
 Expected: `Tests: 69 passed, 69 total`.
 
-- [ ] **Step 2: Manual click-through**
+- [x] **Step 2: Manual click-through**
 
 ```bash
 npm start
@@ -924,11 +924,11 @@ Open `http://localhost:3000`, go to Clients, and:
 - Go to Create, pick a client that has a source folder set, click "Browse Drive…" — confirm the picker's breadcrumb starts at that client's name (not "Drive") and doesn't 503/error unexpectedly beyond what's expected without real Drive credentials configured locally (a `Google Drive isn't connected yet` message is expected in local dev since `GOOGLE_*` env vars aren't set — this confirms the request now targets the client's folder ID instead of `root`, which you can also confirm via browser dev tools' Network tab on the `/api/drive/browse?folderId=...` request).
 - Pick a client with no source folder set, click "Browse Drive…" — confirm it falls back to breadcrumb "Drive" (today's behavior, unchanged).
 
-- [ ] **Step 3: Fix anything found**
+- [x] **Step 3: Fix anything found**
 
 If anything above doesn't match, fix the specific issue directly (must still pass Step 1's `npm test` afterward).
 
-- [ ] **Step 4: Final commit if fixes were made**
+- [x] **Step 4: Final commit if fixes were made**
 
 ```bash
 cd "/Users/dillonmccoy/Niewdel /social-dashboard"
