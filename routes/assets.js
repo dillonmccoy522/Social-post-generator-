@@ -1,9 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
+const higgsfield = require('../services/higgsfield');
+const generator = require('../services/generator');
 
 const TYPES = ['image', 'video'];
 const STATUSES = ['queued', 'generating', 'failed', 'draft', 'approved', 'posted'];
+
+// Kick off generation for an asset without blocking the response (fire-and-forget).
+function startGeneration(id) {
+  db.updateAsset(id, { status: 'generating', error: null });
+  generator.processAsset(id).catch(err => console.error('processAsset error for asset', id, err));
+}
 
 router.get('/', (req, res) => {
   const { clientId, status, campaign } = req.query;

@@ -79,4 +79,20 @@ async function uploadFromUrl(url, filename, clientName, campaign) {
   return created.data;
 }
 
-module.exports = { isConfigured, parseFolderId, browse, ensureFolder, uploadFromUrl };
+// Download a remote file and upload it directly into a specific Drive folder.
+async function uploadToFolder(url, filename, folderId) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to download ${url}: HTTP ${res.status}`);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  const mimeType = res.headers.get('content-type') || 'application/octet-stream';
+
+  const created = await getDrive().files.create({
+    requestBody: { name: filename, parents: [folderId] },
+    media: { mimeType, body: Readable.from(buffer) },
+    fields: 'id, webViewLink, thumbnailLink',
+    supportsAllDrives: true,
+  });
+  return created.data;
+}
+
+module.exports = { isConfigured, parseFolderId, browse, ensureFolder, uploadFromUrl, uploadToFolder };
