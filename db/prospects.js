@@ -175,8 +175,8 @@ function recordTouch(prospect_id, { outcome, notes = null, rep = null }) {
   const d = getDb();
 
   if (EXIT_OUTCOMES[outcome]) {
-    d.prepare('UPDATE prospects SET stage = ?, next_touch_at = NULL WHERE id = ?')
-      .run(EXIT_OUTCOMES[outcome], prospect_id);
+    d.prepare('UPDATE prospects SET cadence_step = ?, stage = ?, next_touch_at = NULL WHERE id = ?')
+      .run(thisStep.step_number, EXIT_OUTCOMES[outcome], prospect_id);
     return touch(prospect_id);
   }
 

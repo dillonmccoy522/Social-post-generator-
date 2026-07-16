@@ -39,6 +39,19 @@ test('the next touch lands on the Playbook day offset', () => {
   expect(delta).toBeLessThan(1.5);
 });
 
+test('the step 2 -> 3 touch lands on the day-offset delta, not the absolute offset', () => {
+  const row = qualified();
+  p.recordTouch(row.id, { outcome: 'no_answer' });          // step 1 (day 0) -> step 2 (day 1)
+  p.recordTouch(row.id, { outcome: 'no_answer' });          // step 2 (day 1) -> step 3 (day 3)
+  const after = p.getProspectById(row.id);
+  // Correct delta is 3 - 1 = 2 days. A buggy implementation using the next step's
+  // absolute day_offset (3) instead of the delta would schedule ~3 days out instead.
+  const due = new Date(after.next_touch_at.replace(' ', 'T') + 'Z');
+  const delta = (due - Date.now()) / 86400000;
+  expect(delta).toBeGreaterThan(1.5);
+  expect(delta).toBeLessThan(2.5);
+});
+
 test('recordTouch refuses to run past the end of the cadence', () => {
   const row = qualified();
   for (let i = 0; i < 9; i++) p.recordTouch(row.id, { outcome: 'no_answer' });
@@ -64,6 +77,26 @@ test('not_interested drops to nurture and leaves the cadence', () => {
   const after = p.recordTouch(row.id, { outcome: 'not_interested' });
   expect(after.stage).toBe('dead_nurture');
   expect(after.next_touch_at).toBeNull();
+});
+
+test('not_interested on the first touch still records cadence_step as completed', () => {
+  const row = qualified();
+  const after = p.recordTouch(row.id, { outcome: 'not_interested' });
+  expect(after.cadence_step).toBe(1);
+  expect(after.stage).toBe('dead_nurture');
+  expect(after.next_touch_at).toBeNull();
+});
+
+test('callback advances the cadence and moves the stage to attempting', () => {
+  const row = qualified();
+  const after = p.recordTouch(row.id, { outcome: 'callback' });
+  expect(after.stage).toBe('attempting');
+  expect(after.next_touch_at).toBeTruthy();
+  expect(after.cadence_step).toBe(1);
+});
+
+test('recordTouch on a nonexistent prospect throws', () => {
+  expect(() => p.recordTouch(999999, { outcome: 'no_answer' })).toThrow(/No prospect/);
 });
 
 test('AUTO-BREAKUP: nine touches with no connect ends the sequence', () => {
