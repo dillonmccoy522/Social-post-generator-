@@ -130,8 +130,98 @@ function getActivities(prospect_id) {
   ).all(prospect_id);
 }
 
+// Outcomes that end the sequence rather than advance it.
+const EXIT_OUTCOMES = {
+  meeting_set: 'meeting_set',
+  not_interested: 'dead_nurture',
+};
+
+// Outcomes that advance the sequence and also move the stage.
+const STAGE_ON_ADVANCE = {
+  connected: 'connected',
+  callback: 'attempting',
+};
+
+function getCadence() {
+  return getDb().prepare('SELECT * FROM cadence_steps ORDER BY step_number').all();
+}
+
+// `cadence_step` is the number of the LAST COMPLETED step. 0 means never touched.
+// The step that is next due is therefore cadence_step + 1. One meaning, everywhere.
+function nextDueStep(steps, cadence_step) {
+  return steps.find((s) => s.step_number === (cadence_step || 0) + 1);
+}
+
+// One tap from Due Today lands here: log it, advance the cadence, schedule the next touch.
+function recordTouch(prospect_id, { outcome, notes = null, rep = null }) {
+  const before = getProspectById(prospect_id);
+  if (!before) throw new Error(`No prospect ${prospect_id}`);
+
+  const steps = getCadence();
+  const thisStep = nextDueStep(steps, before.cadence_step);
+  if (!thisStep) {
+    throw new Error(`Prospect ${prospect_id} has finished the cadence; there is no step to record.`);
+  }
+
+  logActivity({
+    prospect_id,
+    type: thisStep.channel,
+    outcome,
+    notes,
+    rep,
+    cadence_step: thisStep.step_number,
+  });
+
+  const d = getDb();
+
+  if (EXIT_OUTCOMES[outcome]) {
+    d.prepare('UPDATE prospects SET stage = ?, next_touch_at = NULL WHERE id = ?')
+      .run(EXIT_OUTCOMES[outcome], prospect_id);
+    return touch(prospect_id);
+  }
+
+  const nextStep = steps.find((s) => s.step_number === thisStep.step_number + 1);
+
+  // Out of steps: the sequence breaks itself up rather than leaving a lead in limbo.
+  if (!nextStep) {
+    d.prepare(
+      "UPDATE prospects SET cadence_step = ?, stage = 'dead_nurture', next_touch_at = NULL WHERE id = ?"
+    ).run(thisStep.step_number, prospect_id);
+    return touch(prospect_id);
+  }
+
+  const dayGap = nextStep.day_offset - thisStep.day_offset;
+  const dueAt = toSqlUtc(new Date(Date.now() + dayGap * 86400000));
+  const stage = STAGE_ON_ADVANCE[outcome] || (before.stage === 'new' ? 'attempting' : before.stage);
+
+  d.prepare('UPDATE prospects SET cadence_step = ?, next_touch_at = ?, stage = ? WHERE id = ?')
+    .run(thisStep.step_number, dueAt, stage, prospect_id);
+  return touch(prospect_id);
+}
+
+// SQLite stores datetimes as 'YYYY-MM-DD HH:MM:SS' in UTC, matching CURRENT_TIMESTAMP.
+// Kept in one place so the write format and the read format cannot drift apart.
+function toSqlUtc(date) {
+  return date.toISOString().replace('T', ' ').slice(0, 19);
+}
+
+// The morning list: who is due, and what the touch is.
+function getDueToday(now = new Date()) {
+  const rows = getDb().prepare(`
+    SELECT * FROM prospects
+    WHERE status = 'qualified'
+      AND stage NOT IN ('won', 'dead_nurture')
+      AND next_touch_at IS NOT NULL
+      AND next_touch_at <= ?
+    ORDER BY next_touch_at ASC
+  `).all(toSqlUtc(now));
+  const steps = getCadence();
+  return rows.map((r) => ({ ...r, touch: nextDueStep(steps, r.cadence_step) }));
+}
+
 module.exports = {
   createProspect, getProspectById, getProspects, findDuplicate,
   gradeProspect, disqualifyProspect, updateResearch,
   logActivity, getActivities,
+  getCadence, recordTouch, getDueToday,
 };
