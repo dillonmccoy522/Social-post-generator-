@@ -219,9 +219,32 @@ function getDueToday(now = new Date()) {
   return rows.map((r) => ({ ...r, touch: nextDueStep(steps, r.cadence_step) }));
 }
 
+const RUN_UPDATE_FIELDS = ['status', 'searched_count', 'dupe_count', 'enriched_count',
+                           'passed_count', 'error', 'completed_at'];
+
+function getSourcingRunById(id) {
+  return getDb().prepare('SELECT * FROM sourcing_runs WHERE id = ?').get(id);
+}
+
+function createSourcingRun({ filters = {}, requested_count = 0 }) {
+  const result = getDb()
+    .prepare('INSERT INTO sourcing_runs (filters, requested_count) VALUES (?, ?)')
+    .run(JSON.stringify(filters), requested_count);
+  return getSourcingRunById(result.lastInsertRowid);
+}
+
+function updateSourcingRun(id, fields) {
+  const keys = Object.keys(fields).filter((k) => RUN_UPDATE_FIELDS.includes(k));
+  if (keys.length === 0) return getSourcingRunById(id);
+  const set = keys.map((k) => `${k} = ?`).join(', ');
+  getDb().prepare(`UPDATE sourcing_runs SET ${set} WHERE id = ?`).run(...keys.map((k) => fields[k]), id);
+  return getSourcingRunById(id);
+}
+
 module.exports = {
   createProspect, getProspectById, getProspects, findDuplicate,
   gradeProspect, disqualifyProspect, updateResearch,
   logActivity, getActivities,
   getCadence, recordTouch, getDueToday,
+  createSourcingRun, getSourcingRunById, updateSourcingRun,
 };

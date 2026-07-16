@@ -160,3 +160,37 @@ test('updateResearch cannot overwrite Dillon-owned columns', () => {
   expect(after.next_date).toBe('2026-07-20');
   expect(after.notes).toBeNull();
 });
+
+test('createSourcingRun starts queued and stores filters as JSON', () => {
+  const run = p.createSourcingRun({ filters: { trade: 'HVAC', city: 'Concord' }, requested_count: 10 });
+  expect(run.status).toBe('queued');
+  expect(run.requested_count).toBe(10);
+  expect(JSON.parse(run.filters)).toEqual({ trade: 'HVAC', city: 'Concord' });
+});
+
+test('updateSourcingRun records the funnel counts', () => {
+  const run = p.createSourcingRun({ filters: {}, requested_count: 10 });
+  const done = p.updateSourcingRun(run.id, {
+    status: 'done', searched_count: 34, dupe_count: 6, enriched_count: 28, passed_count: 9,
+  });
+  expect(done.status).toBe('done');
+  expect(done.searched_count).toBe(34);
+  expect(done.passed_count).toBe(9);
+});
+
+test('updateSourcingRun records a failure instead of throwing it away', () => {
+  const run = p.createSourcingRun({ filters: {}, requested_count: 5 });
+  const failed = p.updateSourcingRun(run.id, { status: 'failed', error: 'web_search timed out' });
+  expect(failed.status).toBe('failed');
+  expect(failed.error).toBe('web_search timed out');
+});
+
+test('a prospect links back to the run that found it', () => {
+  const run = p.createSourcingRun({ filters: {}, requested_count: 1 });
+  const row = p.createProspect({
+    business_name: 'Found Lead', city: 'Concord', phone: '7045550055',
+    source_run_id: run.id, source_kind: 'agent',
+  });
+  expect(row.source_run_id).toBe(run.id);
+  expect(row.source_kind).toBe('agent');
+});
