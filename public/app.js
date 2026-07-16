@@ -1,5 +1,6 @@
 const pages = {
   home: '/pages/home.html',
+  prospects: '/pages/prospects.html',
   clients: '/pages/clients.html',
   create: '/pages/create.html',
   assets: '/pages/assets.html',

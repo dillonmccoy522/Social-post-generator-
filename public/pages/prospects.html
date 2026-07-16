@@ -1,0 +1,363 @@
+<!-- Prospects CRM. Brand v4.0: Jet ground, Onyx cards, Montserrat headings, blue accent.
+     Scoped under .prospects so none of it leaks into the existing pages. -->
+<style>
+.prospects {
+  --jet:      #0D0D0D;
+  --onyx:     #1A1A1A;
+  --onyx-hi:  #212121;
+  --line:     #2A2A2A;
+  --blue:     #3B86DB;
+  --navy:     #1B4D8F;
+  --cloud:    #F5F5F5;
+  --muted:    rgba(245,245,245,0.55);
+  --faint:    rgba(245,245,245,0.32);
+  --good:     #4ADE80;
+  --bad:      #F87171;
+  --maybe:    #FBBF24;
+  margin: -28px -32px;
+  padding: 28px 32px 64px;
+  background: var(--jet);
+  color: var(--cloud);
+  min-height: 100vh;
+}
+.prospects .eyebrow {
+  font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 11px;
+  letter-spacing: 0.2em; text-transform: uppercase; color: var(--blue);
+}
+.prospects h1 {
+  font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 32px;
+  letter-spacing: -0.02em; margin: 6px 0 4px; color: var(--cloud);
+}
+.prospects .dek { font-size: 14px; color: var(--muted); margin-bottom: 22px; }
+
+.prospects .tabs { display: flex; gap: 2px; background: var(--onyx); border: 1px solid var(--line);
+  border-radius: 10px; padding: 3px; margin-bottom: 22px; width: fit-content; flex-wrap: wrap; }
+.prospects .tab {
+  font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.04em;
+  padding: 8px 15px; border-radius: 7px; border: 0; background: transparent; color: var(--muted);
+  cursor: pointer; text-transform: uppercase;
+}
+.prospects .tab:hover { color: var(--cloud); }
+.prospects .tab.active { background: var(--blue); color: #fff; }
+.prospects .tab .count { opacity: 0.65; margin-left: 6px; font-variant-numeric: tabular-nums; }
+
+.prospects .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr));
+  gap: 10px; margin-bottom: 22px; }
+.prospects .stat { background: var(--onyx); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.prospects .stat .n { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 26px;
+  letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+.prospects .stat .k { font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); margin-top: 6px; }
+.prospects .stat.due .n { color: var(--blue); }
+
+.prospects .card { background: var(--onyx); border: 1px solid var(--line); border-radius: 12px;
+  padding: 18px 20px; margin-bottom: 10px; }
+.prospects .card.due-card { border-left: 3px solid var(--blue); }
+.prospects .row-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
+.prospects .biz { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 17px;
+  letter-spacing: -0.01em; }
+.prospects .meta { font-size: 12px; color: var(--faint); margin-top: 3px; }
+.prospects .hook { font-size: 13px; color: var(--muted); margin-top: 9px; line-height: 1.55; max-width: 68ch; }
+.prospects .phone { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 18px;
+  color: var(--blue); text-decoration: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.prospects .phone:hover { text-decoration: underline; }
+
+.prospects .pill { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 9px;
+  letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 9px; border-radius: 5px;
+  background: #262626; color: var(--faint); white-space: nowrap; }
+.prospects .pill.good  { background: rgba(74,222,128,0.14); color: var(--good); }
+.prospects .pill.bad   { background: rgba(248,113,113,0.14); color: var(--bad); }
+.prospects .pill.maybe { background: rgba(251,191,36,0.14); color: var(--maybe); }
+.prospects .pill.step  { background: rgba(59,134,219,0.16); color: var(--blue); }
+
+.prospects .outcomes { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px;
+  padding-top: 14px; border-top: 1px solid var(--line); }
+.prospects .btn {
+  font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 0.04em;
+  padding: 9px 13px; border-radius: 7px; border: 1px solid var(--line); background: var(--onyx-hi);
+  color: var(--cloud); cursor: pointer; text-transform: uppercase;
+}
+.prospects .btn:hover { border-color: var(--blue); color: var(--blue); }
+.prospects .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+.prospects .btn.primary:hover { background: var(--navy); border-color: var(--navy); color: #fff; }
+.prospects .btn.win { border-color: rgba(74,222,128,0.4); color: var(--good); }
+.prospects .btn.lose { border-color: rgba(248,113,113,0.4); color: var(--bad); }
+
+.prospects .grade-card { max-width: 720px; }
+.prospects .facts { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px;
+  font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.prospects .facts b { color: var(--cloud); font-weight: 600; }
+.prospects .warn { color: var(--maybe); }
+.prospects a.site { color: var(--blue); text-decoration: none; }
+.prospects a.site:hover { text-decoration: underline; }
+.prospects textarea {
+  width: 100%; margin-top: 14px; background: var(--jet); border: 1px solid var(--line);
+  border-radius: 8px; padding: 11px 13px; color: var(--cloud); font-family: 'Inter', sans-serif;
+  font-size: 13px; resize: vertical; min-height: 64px;
+}
+.prospects textarea:focus { outline: none; border-color: var(--blue); }
+.prospects .grade-btns { display: flex; gap: 8px; margin-top: 12px; }
+.prospects .why-note { font-size: 11px; color: var(--faint); margin-top: 8px; }
+
+.prospects .quote { font-size: 13px; color: var(--muted); font-style: italic;
+  border-left: 2px solid var(--line); padding-left: 11px; margin-top: 9px; }
+.prospects .reason { font-size: 12px; color: var(--bad); margin-top: 8px; }
+.prospects .empty { background: var(--onyx); border: 1px solid var(--line); border-radius: 12px;
+  padding: 44px; text-align: center; color: var(--muted); font-size: 14px; }
+.prospects .empty .big { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 19px;
+  color: var(--cloud); margin-bottom: 7px; }
+.prospects .group-head { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint);
+  margin: 22px 0 9px; }
+</style>
+
+<div class="prospects">
+  <div class="eyebrow">Prospecting</div>
+  <h1 id="pTitle">Due Today</h1>
+  <div class="dek" id="pDek">Who to call right now, and what the touch is.</div>
+
+  <div class="stats" id="pStats"></div>
+  <div class="tabs" id="pTabs"></div>
+  <div id="pBody"></div>
+</div>
+
+<script>
+(function () {
+  const VIEWS = {
+    due:     { label: 'Due Today',  title: 'Due Today',    dek: 'Who to call right now, and what the touch is.' },
+    queue:   { label: 'Queue',      title: 'Grading Queue', dek: 'Ungraded leads. Teach me what a good one looks like.' },
+    pipeline:{ label: 'Pipeline',   title: 'Pipeline',      dek: 'Everything in flight, by stage.' },
+    pool:    { label: 'Pool',       title: 'The Pool',      dek: 'Every lead ever found, including the ones you passed on. Nothing is deleted.' },
+  };
+  let view = 'due';
+  let stats = {};
+
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+  const fmtPhone = (p) => {
+    const d = String(p || '').replace(/\D/g, '');
+    return d.length === 10 ? `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}` : (p || '');
+  };
+
+  const api = async (url, opts) => {
+    const res = await fetch(url, opts);
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Request failed');
+    return res.json();
+  };
+
+  function facts(r) {
+    const bits = [];
+    if (r.rating) bits.push(`<span><b>${r.rating}★</b></span>`);
+    if (r.review_count != null) {
+      bits.push(r.review_verified
+        ? `<span><b>${r.review_count}</b> reviews <b style="color:var(--good)">confirmed</b></span>`
+        : `<span class="warn"><b>${r.review_count}</b> reviews · unverified</span>`);
+    } else {
+      bits.push('<span class="warn">reviews unknown</span>');
+    }
+    if (r.website_quality && r.website_quality !== 'unknown') bits.push(`<span>site: <b>${esc(r.website_quality)}</b></span>`);
+    if (r.est_year) bits.push(`<span>est. <b>${r.est_year}</b>${r.est_year_note === 'approximate' ? '~' : ''}</span>`);
+    else bits.push('<span class="warn">age unknown</span>');
+    if (r.owner_name) bits.push(`<span><b>${esc(r.owner_name)}</b></span>`);
+    if (r.website_url) bits.push(`<a class="site" href="${esc(r.website_url)}" target="_blank" rel="noopener">${esc(r.website_url.replace(/^https?:\/\//, ''))}</a>`);
+    return `<div class="facts">${bits.join('')}</div>`;
+  }
+
+  function head(r, right) {
+    return `<div class="row-top">
+      <div>
+        <div class="biz">${esc(r.business_name)}</div>
+        <div class="meta">${[r.trade, r.city].filter(Boolean).map(esc).join(' · ')}</div>
+      </div>
+      <div style="text-align:right">${right || ''}</div>
+    </div>`;
+  }
+
+  // Due Today — the morning list. One tap per call.
+  function renderDue(rows) {
+    if (!rows.length) {
+      return `<div class="empty"><div class="big">Nothing due right now.</div>
+        Grade a few leads in the Queue and they'll show up here when their next touch lands.</div>`;
+    }
+    return rows.map((r) => `
+      <div class="card due-card" data-id="${r.id}">
+        ${head(r, `<a class="phone" href="tel:${esc(r.phone)}">${esc(fmtPhone(r.phone))}</a>
+                   <div style="margin-top:7px"><span class="pill step">${esc(r.touch.channel)} · step ${r.touch.step_number} of 9</span></div>`)}
+        ${r.hook ? `<div class="hook">${esc(r.hook)}</div>` : ''}
+        <div class="outcomes">
+          <button class="btn" data-out="no_answer">No answer</button>
+          <button class="btn" data-out="voicemail">Voicemail</button>
+          <button class="btn" data-out="gatekeeper">Gatekeeper</button>
+          <button class="btn primary" data-out="connected">Connected</button>
+          <button class="btn" data-out="callback">Callback</button>
+          <button class="btn win" data-out="meeting_set">Meeting set</button>
+          <button class="btn lose" data-out="not_interested">Not interested</button>
+        </div>
+      </div>`).join('');
+  }
+
+  // Queue — one lead at a time, big, keyboard-driven.
+  function renderQueue(rows) {
+    if (!rows.length) {
+      return `<div class="empty"><div class="big">Queue is clear.</div>Every lead in the pool has been graded.</div>`;
+    }
+    const r = rows[0];
+    return `
+      <div class="card grade-card" data-id="${r.id}">
+        ${head(r, `<span class="pill">${rows.length} left</span>`)}
+        ${r.hook ? `<div class="hook">${esc(r.hook)}</div>` : ''}
+        ${facts(r)}
+        <textarea id="whyBox" placeholder="Why? (required for a no — this is what teaches the filter)"></textarea>
+        <div class="grade-btns">
+          <button class="btn win" data-grade="good">👍 Good <span style="opacity:.5">G</span></button>
+          <button class="btn" data-grade="maybe">🤷 Maybe <span style="opacity:.5">M</span></button>
+          <button class="btn lose" data-grade="bad">👎 No <span style="opacity:.5">B</span></button>
+        </div>
+        <div class="why-note">A no keeps the lead on record with your reason. Nothing is deleted.</div>
+      </div>`;
+  }
+
+  function renderPipeline(rows) {
+    const STAGES = [
+      ['attempting', 'Attempting'], ['connected', 'Connected'],
+      ['meeting_set', 'Meeting set'], ['proposal', 'Proposal'],
+      ['won', 'Won'], ['dead_nurture', 'Nurture'],
+    ];
+    const live = rows.filter((r) => r.status === 'qualified');
+    const groups = STAGES.map(([key, label]) => {
+      const g = live.filter((r) => r.stage === key);
+      if (!g.length) return '';
+      return `<div class="group-head">${label} · ${g.length}</div>` + g.map((r) => `
+        <div class="card">
+          ${head(r, `<a class="phone" href="tel:${esc(r.phone)}">${esc(fmtPhone(r.phone))}</a>
+            ${r.cadence_step ? `<div style="margin-top:7px"><span class="pill step">step ${r.cadence_step} of 9</span></div>` : ''}`)}
+          ${r.hook ? `<div class="hook">${esc(r.hook)}</div>` : ''}
+        </div>`).join('');
+    }).join('');
+    const waiting = live.filter((r) => r.stage === 'new').length;
+    if (!groups) {
+      return `<div class="empty"><div class="big">Nothing in flight yet.</div>
+        ${waiting} graded lead${waiting === 1 ? '' : 's'} ready to call. Log a first touch and they'll move here.</div>`;
+    }
+    return groups;
+  }
+
+  function renderPool(rows) {
+    const live = rows.filter((r) => r.status !== 'disqualified');
+    const gone = rows.filter((r) => r.status === 'disqualified');
+    const card = (r) => `
+      <div class="card">
+        ${head(r, `<span class="pill ${esc(r.grade || '')}">${r.grade ? esc(r.grade) : 'ungraded'}</span>`)}
+        ${r.hook ? `<div class="hook">${esc(r.hook)}</div>` : ''}
+        ${facts(r)}
+        ${r.grade_why ? `<div class="quote">${esc(r.grade_why)}</div>` : ''}
+        ${r.disqualified_reason ? `<div class="reason">Passed: ${esc(r.disqualified_reason)}</div>` : ''}
+      </div>`;
+    return `<div class="group-head">In play · ${live.length}</div>${live.map(card).join('')}
+            <div class="group-head">Passed on · ${gone.length} · kept on record</div>${gone.map(card).join('')}`;
+  }
+
+  function renderStats() {
+    const s = [
+      ['due', stats.due, 'due today'], ['', stats.ungraded, 'to grade'],
+      ['', stats.qualified, 'qualified'], ['', stats.disqualified, 'passed on'],
+      ['', stats.total, 'in the pool'],
+    ];
+    document.getElementById('pStats').innerHTML = s.map(([cls, n, k]) =>
+      `<div class="stat ${cls}"><div class="n">${n ?? 0}</div><div class="k">${k}</div></div>`).join('');
+    document.getElementById('pTabs').innerHTML = Object.entries(VIEWS).map(([k, v]) => {
+      const n = { due: stats.due, queue: stats.ungraded, pool: stats.total }[k];
+      return `<button class="tab ${k === view ? 'active' : ''}" data-view="${k}">${v.label}${
+        n != null ? `<span class="count">${n}</span>` : ''}</button>`;
+    }).join('');
+  }
+
+  async function load() {
+    const body = document.getElementById('pBody');
+    body.innerHTML = '<div class="empty">Loading…</div>';
+    document.getElementById('pTitle').textContent = VIEWS[view].title;
+    document.getElementById('pDek').textContent = VIEWS[view].dek;
+
+    try {
+      stats = await api('/api/prospects/stats');
+      renderStats();
+      if (view === 'due')      body.innerHTML = renderDue(await api('/api/prospects/due'));
+      else if (view === 'queue')    body.innerHTML = renderQueue(await api('/api/prospects?status=new'));
+      else if (view === 'pipeline') body.innerHTML = renderPipeline(await api('/api/prospects'));
+      else                          body.innerHTML = renderPool(await api('/api/prospects'));
+    } catch (err) {
+      body.innerHTML = `<div class="empty"><div class="big">Could not load.</div>${esc(err.message)}</div>`;
+    }
+  }
+
+  async function grade(id, g) {
+    const why = (document.getElementById('whyBox') || {}).value || '';
+    if (g === 'bad' && !why.trim()) {
+      showToast('Tell me why first. That is what teaches the filter.');
+      document.getElementById('whyBox').focus();
+      return;
+    }
+    try {
+      await api(`/api/prospects/${id}/grade`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grade: g, grade_why: why.trim() || null }),
+      });
+      showToast(g === 'bad' ? 'Passed. Kept on record.' : 'Graded.');
+      load();
+    } catch (err) { showToast(err.message); }
+  }
+
+  async function touch(id, outcome, el) {
+    let notes = null;
+    if (outcome === 'connected' || outcome === 'meeting_set') {
+      notes = prompt('What happened?') || null;
+    }
+    try {
+      await api(`/api/prospects/${id}/touch`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outcome, notes, rep: 'Dillon' }),
+      });
+      const said = { no_answer: 'Logged. Next touch scheduled.', voicemail: 'Voicemail logged.',
+        gatekeeper: 'Logged.', connected: 'Connected. Nice.', callback: 'Callback scheduled.',
+        meeting_set: 'Meeting set.', not_interested: 'Logged and moved to nurture.' }[outcome];
+      showToast(said);
+      load();
+    } catch (err) { showToast(err.message); }
+  }
+
+  document.getElementById('pTabs').addEventListener('click', (e) => {
+    const t = e.target.closest('.tab');
+    if (!t) return;
+    view = t.dataset.view;
+    load();
+  });
+
+  document.getElementById('pBody').addEventListener('click', (e) => {
+    const card = e.target.closest('[data-id]');
+    if (!card) return;
+    const g = e.target.closest('[data-grade]');
+    if (g) return grade(card.dataset.id, g.dataset.grade);
+    const o = e.target.closest('[data-out]');
+    if (o) return touch(card.dataset.id, o.dataset.out, o);
+  });
+
+  // Keyboard grading: the queue only works if it is fast.
+  document.addEventListener('keydown', function onKey(e) {
+    if (!document.querySelector('.prospects')) { document.removeEventListener('keydown', onKey); return; }
+    if (view !== 'queue' || e.target.tagName === 'TEXTAREA') return;
+    const card = document.querySelector('.grade-card');
+    if (!card) return;
+    const k = e.key.toLowerCase();
+    if (!'gmb'.includes(k)) return;
+    // Without this, the same keystroke lands in the why box after grade() focuses it,
+    // and the reason reads "bToo many reviews".
+    e.preventDefault();
+    if (k === 'g') grade(card.dataset.id, 'good');
+    if (k === 'm') grade(card.dataset.id, 'maybe');
+    if (k === 'b') grade(card.dataset.id, 'bad');
+  });
+
+  load();
+})();
+</script>
