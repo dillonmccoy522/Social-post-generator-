@@ -2,6 +2,7 @@ require('dotenv').config();
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const { initProspectsSchema } = require('./db/prospects-schema');
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'dashboard.db');
 
@@ -62,6 +63,7 @@ function initSchema(db) {
     );
   `);
   migrateClientsDriveColumns(db);
+  initProspectsSchema(db);
 }
 
 function migrateClientsDriveColumns(db) {
