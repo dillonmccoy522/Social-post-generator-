@@ -1,7 +1,7 @@
 process.env.DB_PATH = ':memory:';
 const db = require('../database');
 const p = require('../db/prospects');
-const { importProspects } = require('../scripts/import-prospects');
+const { importProspects, scrubEthnicity } = require('../scripts/import-prospects');
 const seed = require('../data/seed/prospects-seed.json');
 
 afterEach(() => {
@@ -62,8 +62,36 @@ test('CR Weavers imports unverified because the sheet flags a conflict', () => {
 
 test('no imported note references owner race', () => {
   importProspects(seed);
-  const all = p.getProspects().map((r) => `${r.grade_why || ''} ${r.notes || ''}`).join(' ').toLowerCase();
-  expect(all).not.toMatch(/black owned|black-owned/);
+  const all = p.getProspects()
+    .map((r) => `${r.grade_why || ''} ${r.notes || ''} ${r.hook || ''}`)
+    .join(' ')
+    .toLowerCase();
+  expect(all).not.toMatch(/\b(black|minority|wom[ae]n|hispanic|latino|asian)[\s-]+owned\b/);
+});
+
+describe('scrubEthnicity', () => {
+  test('removes the ethnicity clause but preserves the rest of Bucket Hat\'s notes', () => {
+    const raw = 'Est. 2023 (~2y, verified). ⚠Google reviews UNVERIFIED (may fail 15 floor). '
+      + 'Minority-owned. Calvin Dulin (verified).';
+    const scrubbed = scrubEthnicity(raw);
+    expect(scrubbed).not.toMatch(/minority[\s-]+owned/i);
+    expect(scrubbed).toContain('Est. 2023 (~2y, verified).');
+    expect(scrubbed).toContain('⚠Google reviews UNVERIFIED (may fail 15 floor).');
+    expect(scrubbed).toContain('Calvin Dulin (verified).');
+  });
+
+  test('passes null and undefined through unchanged', () => {
+    expect(scrubEthnicity(null)).toBeNull();
+    expect(scrubEthnicity(undefined)).toBeUndefined();
+  });
+
+  test('returns text unchanged when there is nothing to scrub', () => {
+    expect(scrubEthnicity('7-yr father/son shop, veteran-owned.')).toBe('7-yr father/son shop, veteran-owned.');
+  });
+
+  test('returns null when the entire string is the ethnicity reference', () => {
+    expect(scrubEthnicity('Black owned.')).toBeNull();
+  });
 });
 
 test('est_year parses without inventing a year', () => {

@@ -27,6 +27,42 @@ const VERIFIED_REVIEWS = new Set(['JP Lawn and Landscaping', 'Gwinn Lawn Care'])
 // Business signals only. These two notes cite the owner's race; the leads import, the text does not.
 const DROP_WHY = new Set(['Gwinn Lawn Care', 'Bucket Hat Landscaping']);
 
+// Owner race/ethnicity is never a selection, exclusion, or stored factor — business
+// signals only. This catches the phrase wherever it lands, in any free-text field,
+// rather than depending on DROP_WHY remembering every lead/column it can hide in.
+// Veteran status is deliberately excluded: it is not race or ethnicity.
+const ETHNICITY_RE = /\b(black|minority|wom[ae]n|hispanic|latino|asian)[\s-]+owned\b/i;
+
+// Removes any sentence (and, failing that, any comma-separated clause within a
+// sentence) that references owner race/ethnicity, leaving the rest of the text and
+// its formatting intact. Passes null/undefined through unchanged. Returns null if
+// nothing survives the scrub.
+function scrubEthnicity(text) {
+  if (text === null || text === undefined) return text;
+  const str = String(text);
+  if (!ETHNICITY_RE.test(str)) return text;
+
+  const sentences = str.split(/(?<=[.!?])\s+/);
+  const kept = [];
+
+  for (const sentence of sentences) {
+    if (!sentence.trim()) continue;
+    if (!ETHNICITY_RE.test(sentence)) {
+      kept.push(sentence);
+      continue;
+    }
+    // Sentence references ethnicity. Try to salvage any non-offending clauses.
+    const trailingPunct = (sentence.match(/[.!?]+\s*$/) || [''])[0];
+    const body = trailingPunct ? sentence.slice(0, sentence.length - trailingPunct.length) : sentence;
+    const clauses = body.split(/\s*,\s*/).filter((c) => c.trim() && !ETHNICITY_RE.test(c));
+    if (clauses.length) kept.push(clauses.join(', ') + trailingPunct);
+    // else: the whole sentence was the ethnicity reference; drop it entirely.
+  }
+
+  const result = kept.join(' ').replace(/[ \t]+/g, ' ').trim();
+  return result || null;
+}
+
 function segment(raw) {
   if (!raw) return null;
   const m = String(raw).match(/Invisible|Greenfield|Overspend/i);
@@ -47,7 +83,9 @@ function reviewCount(raw) {
 function toFields(name, row, { disqualified }) {
   const est = parseEstYear(row['Est. Year']);
   const grade = GRADE[row['Grade']] || null;
-  const why = DROP_WHY.has(name) ? null : (row['Why (teach me)'] || null);
+  const why = DROP_WHY.has(name) ? null : scrubEthnicity(row['Why (teach me)'] || null);
+  const notes = scrubEthnicity(row['Notes (why-not-hot / objections)'] || null);
+  const hook = scrubEthnicity(row['Hook (the one specific observation)'] || null);
 
   let status = 'new';
   if (disqualified) status = 'disqualified';
@@ -71,16 +109,16 @@ function toFields(name, row, { disqualified }) {
     est_year: est.year,
     est_year_note: est.note,
     segment: segment(row['Segment']),
-    hook: row['Hook (the one specific observation)'] || null,
+    hook,
     grade,
     grade_why: why,
-    notes: row['Notes (why-not-hot / objections)'] || null,
+    notes,
     next_action: row['Next Action'] || null,
     rep: row['Rep'] || null,
     stage: (row['Stage'] || 'new').toLowerCase().replace(/[^a-z]/g, '_'),
     status,
     disqualified_reason: disqualified
-      ? (row['Notes (why-not-hot / objections)'] || 'Dropped by the 2026-07-15 rebuild; reason not recorded')
+      ? (notes || 'Dropped by the 2026-07-15 rebuild; reason not recorded')
       : null,
     source_kind: 'sheet',
     ...(RESTORE[name] || {}),
@@ -114,7 +152,7 @@ function importProspects(seed) {
   };
 }
 
-module.exports = { importProspects };
+module.exports = { importProspects, scrubEthnicity };
 
 if (require.main === module) {
   const seed = require('../data/seed/prospects-seed.json');
