@@ -23,6 +23,11 @@ Every task's requirements implicitly include this section.
 - **UI copy** (Plan 2, noted here for continuity) follows Niewdel brand voice: advisor not salesperson, lead with the outcome, short sentences, contractions fine, **no em-dashes**. Banned words: world-class, cutting-edge, game-changing, guru, "innovative solutions", "solutions provider".
 - **Follow existing codebase patterns:** `CREATE TABLE IF NOT EXISTS` in schema init, `migrate*` functions for later column additions, `getX`/`createX`/`updateX` naming, tests set `process.env.DB_PATH = ':memory:'` at the top and call `db.closeDb()` in `afterEach`.
 - **No new npm dependencies in this plan.**
+- **The baseline is RED. Do not chase it, do not fix it.** `main` already fails exactly two tests before any work in this plan, both in files this plan never touches:
+  - `tests/drive.test.js` "returns 503 when not configured" gets 502. It clears the `GOOGLE_*` env vars in `afterEach` but never before the first test, and `dotenv` loads the real `.env` at require time. Red only on a machine with populated Drive credentials.
+  - `tests/stats.test.js` "counts and orders activity" expects `postsThisWeek` 1, gets 0. It hard-codes `created_at = '2026-07-09 10:00:00'` against a rolling `datetime('now','-7 days')` window, which aged out on 2026-07-16.
+
+  **The gate for every `npm test` step in this plan is: exactly these two failures and no more.** A third failure is ours. These two are tracked as separate follow-ups; fixing them here would mix unrelated files into this branch's diff.
 
 ## Decisions this plan locks in (refinements to the spec)
 
@@ -379,7 +384,7 @@ Expected: PASS, 5 tests
 - [ ] **Step 5: Run the full suite to prove no regression**
 
 Run: `npm test`
-Expected: PASS — all pre-existing suites still green. The new schema must not disturb clients/posts/assets.
+Expected: exactly the two known baseline failures (`drive.test.js`, `stats.test.js`) and no others. The new schema must not disturb clients/posts/assets. A third failure is ours.
 
 - [ ] **Step 6: Commit**
 
@@ -1456,7 +1461,7 @@ Expected: PASS, 10 tests
 - [ ] **Step 5: Run the full suite**
 
 Run: `npm test`
-Expected: PASS — every suite, old and new.
+Expected: exactly the two known baseline failures (`drive.test.js`, `stats.test.js`) and no others. Every new suite green.
 
 - [ ] **Step 6: Run the import for real and eyeball it**
 
@@ -1486,7 +1491,7 @@ git commit -m "feat: import the 30 recovered leads, including the 12 the rebuild
 
 ## Definition of done
 
-- [ ] `npm test` passes, old suites included
+- [ ] `npm test` shows exactly the two known baseline failures and no others
 - [ ] 30 prospects in SQLite: 18 live, 12 disqualified with reasons
 - [ ] Exactly 2 leads carry `review_verified = 1`
 - [ ] No module in this plan exports a delete path
