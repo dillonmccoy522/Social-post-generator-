@@ -114,7 +114,24 @@ function updateResearch(id, fields) {
   return touch(id);
 }
 
+// Append-only. There is deliberately no updateActivity or deleteActivity:
+// the record of what happened on a call is immutable, and stage is a summary of it.
+function logActivity({ prospect_id, type, outcome = null, notes = null, rep = null, cadence_step = null }) {
+  const result = getDb().prepare(`
+    INSERT INTO activities (prospect_id, type, outcome, notes, rep, cadence_step)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(prospect_id, type, outcome, notes, rep, cadence_step);
+  return getDb().prepare('SELECT * FROM activities WHERE id = ?').get(result.lastInsertRowid);
+}
+
+function getActivities(prospect_id) {
+  return getDb().prepare(
+    'SELECT * FROM activities WHERE prospect_id = ? ORDER BY occurred_at DESC, id DESC'
+  ).all(prospect_id);
+}
+
 module.exports = {
   createProspect, getProspectById, getProspects, findDuplicate,
   gradeProspect, disqualifyProspect, updateResearch,
+  logActivity, getActivities,
 };
