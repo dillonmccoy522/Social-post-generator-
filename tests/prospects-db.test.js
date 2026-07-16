@@ -125,11 +125,18 @@ test('NEVER-DELETE: the module exposes no delete path', () => {
   expect(exported).not.toMatch(/delete|destroy|remove|purge|drop/);
 });
 
+test('NEVER-DELETE: source contains no destructive SQL', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'db', 'prospects.js'), 'utf-8');
+  expect(source.toUpperCase()).not.toMatch(/DELETE\s+FROM|DROP\s+TABLE|TRUNCATE/);
+});
+
 test('updateResearch cannot overwrite Dillon-owned columns', () => {
   const row = p.createProspect({ business_name: 'Gwinn Lawn Care', city: 'Gastonia', phone: '9802852055' });
   p.gradeProspect(row.id, { grade: 'good', grade_why: 'Strong reviews, template site' });
   const d = require('../database').getDb();
-  d.prepare("UPDATE prospects SET stage='attempting', rep='Dillon' WHERE id = ?").run(row.id);
+  d.prepare("UPDATE prospects SET stage='attempting', rep='Dillon', next_action='Follow up Monday', next_date='2026-07-20' WHERE id = ?").run(row.id);
 
   const after = p.updateResearch(row.id, {
     review_count: 30,
@@ -138,6 +145,8 @@ test('updateResearch cannot overwrite Dillon-owned columns', () => {
     grade_why: 'overwritten',  // must be ignored
     stage: 'new',              // must be ignored
     rep: null,                 // must be ignored
+    next_action: 'Call Tuesday',  // must be ignored
+    next_date: '2026-07-22',      // must be ignored
     notes: 'clobbered',        // must be ignored
   });
 
@@ -147,5 +156,7 @@ test('updateResearch cannot overwrite Dillon-owned columns', () => {
   expect(after.grade_why).toBe('Strong reviews, template site');
   expect(after.stage).toBe('attempting');
   expect(after.rep).toBe('Dillon');
+  expect(after.next_action).toBe('Follow up Monday');
+  expect(after.next_date).toBe('2026-07-20');
   expect(after.notes).toBeNull();
 });
