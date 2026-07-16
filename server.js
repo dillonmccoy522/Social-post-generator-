@@ -8,6 +8,7 @@ const postsRouter = require('./routes/posts');
 const assetsRouter = require('./routes/assets');
 const statsRouter = require('./routes/stats');
 const driveRouter = require('./routes/drive');
+const prospectsRouter = require('./routes/prospects');
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/api/posts', postsRouter);
 app.use('/api/assets', assetsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/drive', driveRouter);
+app.use('/api/prospects', prospectsRouter);
 
 // SPA fallback — serve index.html for any non-API route
 app.get('*', (req, res) => {
