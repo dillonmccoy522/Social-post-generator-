@@ -109,12 +109,47 @@
 .prospects .group-head { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 11px;
   letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint);
   margin: 22px 0 9px; }
+
+/* Detail page */
+.prospects .detail-back { background: transparent; border: 0; color: var(--muted); cursor: pointer;
+  font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.04em;
+  text-transform: uppercase; padding: 0; margin-bottom: 18px; }
+.prospects .detail-back:hover { color: var(--blue); }
+.prospects .call-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 16px 0; border-bottom: 1px solid var(--line); margin-top: 6px; }
+.prospects .call-bar .phone { font-size: 26px; }
+.prospects .sec { margin-top: 26px; }
+.prospects .edit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px 16px; margin-top: 4px; }
+.prospects .field { display: flex; flex-direction: column; gap: 5px; }
+.prospects .field label { font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.prospects .field input, .prospects .field select { background: var(--jet); border: 1px solid var(--line);
+  border-radius: 8px; padding: 9px 11px; color: var(--cloud); font-family: 'Inter', sans-serif; font-size: 13px; }
+.prospects .field input:focus, .prospects .field select:focus { outline: none; border-color: var(--blue); }
+.prospects .field textarea { margin-top: 0; }
+.prospects .contact { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--line); }
+.prospects .contact .nm { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px; }
+.prospects .contact .rl { font-size: 12px; color: var(--faint); margin-top: 2px; }
+.prospects .tag { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 8px; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 3px 7px; border-radius: 4px; background: rgba(59,134,219,0.16);
+  color: var(--blue); margin-left: 6px; }
+.prospects .log-row { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line);
+  font-size: 12px; color: var(--muted); }
+.prospects .log-row .when { color: var(--faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.prospects .verified { color: var(--good); font-weight: 600; }
+.prospects .row-actions { display: flex; gap: 7px; }
+.prospects .link-btn { background: transparent; border: 0; color: var(--faint); cursor: pointer; font-size: 11px;
+  font-family: 'Montserrat', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.prospects .link-btn:hover { color: var(--blue); }
+.prospects .link-btn.del:hover { color: var(--bad); }
 </style>
 
 <div class="prospects">
   <div class="eyebrow">Prospecting</div>
-  <h1 id="pTitle">Due Today</h1>
-  <div class="dek" id="pDek">Who to call right now, and what the touch is.</div>
+  <h1 id="pTitle">Pipeline</h1>
+  <div class="dek" id="pDek">Everything in flight, by stage.</div>
 
   <div class="stats" id="pStats"></div>
   <div class="tabs" id="pTabs"></div>
@@ -124,12 +159,12 @@
 <script>
 (function () {
   const VIEWS = {
-    due:     { label: 'Due Today',  title: 'Due Today',    dek: 'Who to call right now, and what the touch is.' },
-    queue:   { label: 'Queue',      title: 'Grading Queue', dek: 'Ungraded leads. Teach me what a good one looks like.' },
     pipeline:{ label: 'Pipeline',   title: 'Pipeline',      dek: 'Everything in flight, by stage.' },
+    queue:   { label: 'Queue',      title: 'Grading Queue', dek: 'Ungraded leads. Teach me what a good one looks like.' },
     pool:    { label: 'Pool',       title: 'The Pool',      dek: 'Every lead ever found, including the ones you passed on. Nothing is deleted.' },
   };
-  let view = 'due';
+  let view = 'pipeline';
+  let detailId = null;
   let stats = {};
 
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
@@ -174,29 +209,6 @@
     </div>`;
   }
 
-  // Due Today — the morning list. One tap per call.
-  function renderDue(rows) {
-    if (!rows.length) {
-      return `<div class="empty"><div class="big">Nothing due right now.</div>
-        Grade a few leads in the Queue and they'll show up here when their next touch lands.</div>`;
-    }
-    return rows.map((r) => `
-      <div class="card due-card" data-id="${r.id}">
-        ${head(r, `<a class="phone" href="tel:${esc(r.phone)}">${esc(fmtPhone(r.phone))}</a>
-                   <div style="margin-top:7px"><span class="pill step">${esc(r.touch.channel)} · step ${r.touch.step_number} of 9</span></div>`)}
-        ${r.hook ? `<div class="hook">${esc(r.hook)}</div>` : ''}
-        <div class="outcomes">
-          <button class="btn" data-out="no_answer">No answer</button>
-          <button class="btn" data-out="voicemail">Voicemail</button>
-          <button class="btn" data-out="gatekeeper">Gatekeeper</button>
-          <button class="btn primary" data-out="connected">Connected</button>
-          <button class="btn" data-out="callback">Callback</button>
-          <button class="btn win" data-out="meeting_set">Meeting set</button>
-          <button class="btn lose" data-out="not_interested">Not interested</button>
-        </div>
-      </div>`).join('');
-  }
-
   // Queue — one lead at a time, big, keyboard-driven.
   function renderQueue(rows) {
     if (!rows.length) {
@@ -204,7 +216,7 @@
     }
     const r = rows[0];
     return `
-      <div class="card grade-card" data-id="${r.id}">
+      <div class="card grade-card" data-id="${r.id}" data-open="${r.id}" style="cursor:pointer">
         ${head(r, `<span class="pill">${rows.length} left</span>`)}
         ${r.hook ? `<div class="hook">${esc(r.hook)}</div>` : ''}
         ${facts(r)}
@@ -229,7 +241,7 @@
       const g = live.filter((r) => r.stage === key);
       if (!g.length) return '';
       return `<div class="group-head">${label} · ${g.length}</div>` + g.map((r) => `
-        <div class="card">
+        <div class="card" data-open="${r.id}" style="cursor:pointer">
           ${head(r, `<a class="phone" href="tel:${esc(r.phone)}">${esc(fmtPhone(r.phone))}</a>
             ${r.cadence_step ? `<div style="margin-top:7px"><span class="pill step">step ${r.cadence_step} of 9</span></div>` : ''}`)}
           ${r.hook ? `<div class="hook">${esc(r.hook)}</div>` : ''}
@@ -247,7 +259,7 @@
     const live = rows.filter((r) => r.status !== 'disqualified');
     const gone = rows.filter((r) => r.status === 'disqualified');
     const card = (r) => `
-      <div class="card">
+      <div class="card" data-open="${r.id}" style="cursor:pointer">
         ${head(r, `<span class="pill ${esc(r.grade || '')}">${r.grade ? esc(r.grade) : 'ungraded'}</span>`)}
         ${r.hook ? `<div class="hook">${esc(r.hook)}</div>` : ''}
         ${facts(r)}
@@ -260,20 +272,21 @@
 
   function renderStats() {
     const s = [
-      ['due', stats.due, 'due today'], ['', stats.ungraded, 'to grade'],
-      ['', stats.qualified, 'qualified'], ['', stats.disqualified, 'passed on'],
-      ['', stats.total, 'in the pool'],
+      ['', stats.ungraded, 'to grade'], ['', stats.qualified, 'qualified'],
+      ['', stats.disqualified, 'passed on'], ['', stats.total, 'in the pool'],
     ];
     document.getElementById('pStats').innerHTML = s.map(([cls, n, k]) =>
       `<div class="stat ${cls}"><div class="n">${n ?? 0}</div><div class="k">${k}</div></div>`).join('');
     document.getElementById('pTabs').innerHTML = Object.entries(VIEWS).map(([k, v]) => {
-      const n = { due: stats.due, queue: stats.ungraded, pool: stats.total }[k];
+      const n = { queue: stats.ungraded, pool: stats.total }[k];
       return `<button class="tab ${k === view ? 'active' : ''}" data-view="${k}">${v.label}${
         n != null ? `<span class="count">${n}</span>` : ''}</button>`;
     }).join('');
   }
 
+  // load() is list mode. Entering it always leaves the detail page.
   async function load() {
+    detailId = null;
     const body = document.getElementById('pBody');
     body.innerHTML = '<div class="empty">Loading…</div>';
     document.getElementById('pTitle').textContent = VIEWS[view].title;
@@ -282,13 +295,212 @@
     try {
       stats = await api('/api/prospects/stats');
       renderStats();
-      if (view === 'due')      body.innerHTML = renderDue(await api('/api/prospects/due'));
-      else if (view === 'queue')    body.innerHTML = renderQueue(await api('/api/prospects?status=new'));
+      if (view === 'queue')         body.innerHTML = renderQueue(await api('/api/prospects?status=new'));
       else if (view === 'pipeline') body.innerHTML = renderPipeline(await api('/api/prospects'));
       else                          body.innerHTML = renderPool(await api('/api/prospects'));
     } catch (err) {
       body.innerHTML = `<div class="empty"><div class="big">Could not load.</div>${esc(err.message)}</div>`;
     }
+  }
+
+  // ---- Detail page ----
+
+  function pill(r) {
+    if (r.status === 'disqualified') return '<span class="pill bad">passed</span>';
+    if (r.grade) return `<span class="pill ${esc(r.grade)}">${esc(r.grade)}</span>`;
+    return '<span class="pill">ungraded</span>';
+  }
+
+  const opt = (v, cur) => `<option value="${v}"${v === (cur || '') ? ' selected' : ''}>${v}</option>`;
+
+  function contactRow(c) {
+    const tags = (c.is_decision_maker ? '<span class="tag">decision maker</span>' : '') +
+                 (c.is_gatekeeper ? '<span class="tag">gatekeeper</span>' : '');
+    const ph = c.phone
+      ? `<a class="phone" style="font-size:14px" href="tel:${esc(c.phone)}">${esc(fmtPhone(c.phone))}</a>
+         <button class="link-btn" data-copy="${esc(c.phone)}">Copy</button>`
+      : '<span style="color:var(--faint);font-size:12px">no phone</span>';
+    return `<div class="contact">
+      <div>
+        <div class="nm">${esc(c.name)}${tags}</div>
+        <div class="rl">${esc(c.role || 'contact')}${c.email ? ' · ' + esc(c.email) : ''}</div>
+        <div style="margin-top:6px">${ph}</div>
+      </div>
+      <div class="row-actions"><button class="link-btn del" data-deactivate="${c.id}">Remove</button></div>
+    </div>`;
+  }
+
+  function editForm(r) {
+    const f = (label, key, val) => `<div class="field"><label>${label}</label><input data-f="${key}" value="${esc(val)}"></div>`;
+    return `<div class="edit-grid">
+      ${f('Owner', 'owner_name', r.owner_name)}
+      ${f('Phone', 'phone', r.phone)}
+      ${f('Email', 'email', r.email)}
+      ${f('Website', 'website_url', r.website_url)}
+      ${f('Rating', 'rating', r.rating)}
+      ${f('Reviews', 'review_count', r.review_count)}
+      ${f('Est. year', 'est_year', r.est_year)}
+      <div class="field"><label>Site quality</label><select data-f="website_quality">${['unknown','none','basic','good'].map((v) => opt(v, r.website_quality)).join('')}</select></div>
+      <div class="field"><label>Runs ads</label><select data-f="runs_ads">${['unknown','no','google','meta','both'].map((v) => opt(v, r.runs_ads)).join('')}</select></div>
+      ${f('Segment', 'segment', r.segment)}
+    </div>
+    <div class="field" style="margin-top:12px"><label>Hook</label><textarea data-f="hook">${esc(r.hook)}</textarea></div>
+    <div class="field" style="margin-top:12px"><label>Notes</label><textarea data-f="notes">${esc(r.notes)}</textarea></div>
+    <div style="margin-top:14px"><button class="btn primary" data-save>Save changes</button></div>`;
+  }
+
+  function detailHtml(r) {
+    const verified = r.review_verified ? ' <span class="verified">✓ verified</span>' : '';
+    const reviews = r.review_count != null ? `${r.review_count} reviews${verified}` : 'reviews unknown';
+    const active = r.contacts.filter((c) => c.is_active);
+    const grades = r.status === 'new' ? `
+      <div class="sec">
+        <div class="group-head">Grade this lead</div>
+        <textarea id="whyBox" placeholder="Why? (required for a no — this is what teaches the filter)"></textarea>
+        <div class="grade-btns">
+          <button class="btn win" data-grade="good">👍 Good</button>
+          <button class="btn" data-grade="maybe">🤷 Maybe</button>
+          <button class="btn lose" data-grade="bad">👎 No</button>
+        </div>
+        <div class="why-note">A no keeps the lead on record with your reason. Nothing is deleted.</div>
+      </div>` : '';
+
+    return `
+      <button class="detail-back" data-back>‹ Back</button>
+      <div class="row-top">
+        <div>
+          <div class="biz" style="font-size:24px">${esc(r.business_name)}</div>
+          <div class="meta">${[r.trade, r.city, r.segment].filter(Boolean).map(esc).join(' · ')}</div>
+        </div>
+        <div>${pill(r)}</div>
+      </div>
+
+      <div class="call-bar">
+        ${r.phone
+          ? `<a class="phone" href="tel:${esc(r.phone)}">${esc(fmtPhone(r.phone))}</a>
+             <button class="btn primary" data-call="${esc(r.phone)}">Call</button>
+             <button class="btn" data-copy="${esc(r.phone)}">Copy</button>`
+          : '<span style="color:var(--faint)">No phone on file</span>'}
+        <span style="color:var(--muted);font-size:13px">${r.rating ? r.rating + '★ · ' : ''}${reviews}${r.est_year ? ' · est ' + r.est_year : ''}</span>
+      </div>
+
+      <div class="sec">
+        <div class="group-head">Details — edit and save</div>
+        ${editForm(r)}
+      </div>
+
+      <div class="sec">
+        <div class="group-head">Contacts · ${active.length}</div>
+        ${active.map(contactRow).join('') || '<div style="color:var(--faint);font-size:13px;padding:6px 0">No contacts yet.</div>'}
+        <div style="margin-top:14px" class="edit-grid">
+          <div class="field"><label>Name</label><input id="cName" placeholder="Mike Ross"></div>
+          <div class="field"><label>Role</label><input id="cRole" placeholder="owner"></div>
+          <div class="field"><label>Phone</label><input id="cPhone" placeholder="(704) 555-0148"></div>
+          <div class="field"><label>Email</label><input id="cEmail" placeholder="mike@example.com"></div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <button class="btn" data-addcontact>+ Add contact</button>
+          <label style="font-size:12px;color:var(--muted)"><input type="checkbox" id="cDM"> decision maker</label>
+          <label style="font-size:12px;color:var(--muted)"><input type="checkbox" id="cGK"> gatekeeper</label>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="group-head">Log a call</div>
+        <div class="outcomes" style="border-top:0;padding-top:0">
+          <button class="btn" data-logout="no_answer">No answer</button>
+          <button class="btn" data-logout="voicemail">Voicemail</button>
+          <button class="btn" data-logout="gatekeeper">Gatekeeper</button>
+          <button class="btn primary" data-logout="connected">Connected</button>
+          <button class="btn" data-logout="callback">Callback</button>
+          <button class="btn win" data-logout="meeting_set">Meeting set</button>
+          <button class="btn lose" data-logout="not_interested">Not interested</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="group-head">Call log · ${r.activities.length}</div>
+        ${r.activities.length ? r.activities.map((a) => `
+          <div class="log-row">
+            <span class="when">${esc(String(a.occurred_at || '').replace('T', ' ').slice(0, 16))}</span>
+            <span><b style="color:var(--cloud)">${esc(a.type)}</b>${a.outcome ? ' · ' + esc(a.outcome) : ''}${a.notes ? ' — ' + esc(a.notes) : ''}</span>
+          </div>`).join('') : '<div style="color:var(--faint);font-size:13px;padding:6px 0">No calls logged yet.</div>'}
+      </div>
+
+      ${grades}`;
+  }
+
+  async function loadDetail() {
+    const body = document.getElementById('pBody');
+    document.getElementById('pStats').innerHTML = '';
+    document.getElementById('pTabs').innerHTML = '';
+    document.getElementById('pTitle').textContent = 'Lead';
+    document.getElementById('pDek').textContent = '';
+    body.innerHTML = '<div class="empty">Loading…</div>';
+    try {
+      const r = await api(`/api/prospects/${detailId}`);
+      body.innerHTML = detailHtml(r);
+    } catch (err) {
+      body.innerHTML = `<div class="empty"><div class="big">Could not load.</div>${esc(err.message)}</div>`;
+    }
+  }
+
+  async function saveDetail() {
+    const fields = {};
+    document.querySelectorAll('#pBody [data-f]').forEach((el) => {
+      const v = el.value.trim();
+      fields[el.dataset.f] = v === '' ? null : v;
+    });
+    try {
+      await api(`/api/prospects/${detailId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields),
+      });
+      showToast('Saved.');
+      loadDetail();
+    } catch (err) { showToast(err.message); }
+  }
+
+  async function addContact() {
+    const name = document.getElementById('cName').value.trim();
+    if (!name) { showToast('A contact needs a name.'); return; }
+    const body = {
+      name,
+      role: document.getElementById('cRole').value.trim() || null,
+      phone: document.getElementById('cPhone').value.trim() || null,
+      email: document.getElementById('cEmail').value.trim() || null,
+      is_decision_maker: document.getElementById('cDM').checked ? 1 : 0,
+      is_gatekeeper: document.getElementById('cGK').checked ? 1 : 0,
+    };
+    try {
+      await api(`/api/prospects/${detailId}/contacts`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      showToast('Contact added.');
+      loadDetail();
+    } catch (err) { showToast(err.message); }
+  }
+
+  async function removeContact(cid) {
+    try {
+      await api(`/api/prospects/${detailId}/contacts/${cid}/deactivate`, { method: 'POST' });
+      showToast('Contact removed.');
+      loadDetail();
+    } catch (err) { showToast(err.message); }
+  }
+
+  async function logOutcome(outcome) {
+    let notes = null;
+    if (outcome === 'connected' || outcome === 'meeting_set') notes = prompt('What happened?') || null;
+    try {
+      await api(`/api/prospects/${detailId}/log`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outcome, notes }),
+      });
+      showToast('Logged.');
+      loadDetail();
+    } catch (err) { showToast(err.message); }
   }
 
   async function grade(id, g) {
@@ -308,24 +520,6 @@
     } catch (err) { showToast(err.message); }
   }
 
-  async function touch(id, outcome, el) {
-    let notes = null;
-    if (outcome === 'connected' || outcome === 'meeting_set') {
-      notes = prompt('What happened?') || null;
-    }
-    try {
-      await api(`/api/prospects/${id}/touch`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ outcome, notes, rep: 'Dillon' }),
-      });
-      const said = { no_answer: 'Logged. Next touch scheduled.', voicemail: 'Voicemail logged.',
-        gatekeeper: 'Logged.', connected: 'Connected. Nice.', callback: 'Callback scheduled.',
-        meeting_set: 'Meeting set.', not_interested: 'Logged and moved to nurture.' }[outcome];
-      showToast(said);
-      load();
-    } catch (err) { showToast(err.message); }
-  }
-
   document.getElementById('pTabs').addEventListener('click', (e) => {
     const t = e.target.closest('.tab');
     if (!t) return;
@@ -334,12 +528,32 @@
   });
 
   document.getElementById('pBody').addEventListener('click', (e) => {
-    const card = e.target.closest('[data-id]');
-    if (!card) return;
+    // Detail-page actions
+    if (e.target.closest('[data-back]')) { detailId = null; return load(); }
+    const copyBtn = e.target.closest('[data-copy]');
+    if (copyBtn) return copyToClipboard(copyBtn.dataset.copy);
+    const callBtn = e.target.closest('[data-call]');
+    if (callBtn) { location.href = 'tel:' + callBtn.dataset.call; return; }
+    if (e.target.closest('[data-save]')) return saveDetail();
+    if (e.target.closest('[data-addcontact]')) return addContact();
+    const deact = e.target.closest('[data-deactivate]');
+    if (deact) return removeContact(deact.dataset.deactivate);
+    const logout = e.target.closest('[data-logout]');
+    if (logout) return logOutcome(logout.dataset.logout);
+
+    // Grade — works in the Queue (card carries data-id) and on the detail page (uses detailId)
     const g = e.target.closest('[data-grade]');
-    if (g) return grade(card.dataset.id, g.dataset.grade);
-    const o = e.target.closest('[data-out]');
-    if (o) return touch(card.dataset.id, o.dataset.out, o);
+    if (g) {
+      const holder = e.target.closest('[data-id]');
+      return grade(holder ? holder.dataset.id : detailId, g.dataset.grade);
+    }
+
+    // Open a lead's detail from any list card (ignore clicks on inner controls)
+    const openable = e.target.closest('[data-open]');
+    if (openable && !e.target.closest('button, textarea, input, select, a')) {
+      detailId = Number(openable.dataset.open);
+      return loadDetail();
+    }
   });
 
   // Keyboard grading: the queue only works if it is fast.
