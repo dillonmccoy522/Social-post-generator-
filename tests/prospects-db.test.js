@@ -194,3 +194,23 @@ test('a prospect links back to the run that found it', () => {
   expect(row.source_run_id).toBe(run.id);
   expect(row.source_kind).toBe('agent');
 });
+
+test('logCall logs an activity and moves stage on connected, without scheduling', () => {
+  const r = p.createProspect({ business_name: 'Ben Ross Roofing', city: 'Charlotte', phone: '7045550148' });
+  const after = p.logCall(r.id, { outcome: 'connected', notes: 'talked to owner' });
+  expect(after.stage).toBe('connected');
+  expect(after.next_touch_at).toBeNull();
+  const acts = p.getActivities(r.id);
+  expect(acts).toHaveLength(1);
+  expect(acts[0].outcome).toBe('connected');
+});
+
+test('logCall bumps a new lead to attempting on a plain outcome', () => {
+  const r = p.createProspect({ business_name: 'Amen Plumbing', city: 'Charlotte', phone: '7045550149' });
+  expect(p.logCall(r.id, { outcome: 'no_answer' }).stage).toBe('attempting');
+});
+
+test('logCall moves not_interested to dead_nurture', () => {
+  const r = p.createProspect({ business_name: 'Top Cut Tree', city: 'Charlotte', phone: '7045550150' });
+  expect(p.logCall(r.id, { outcome: 'not_interested' }).stage).toBe('dead_nurture');
+});

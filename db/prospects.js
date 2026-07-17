@@ -11,6 +11,7 @@
 
 const { getDb } = require('../database');
 const { normalizePhone, dedupeKey } = require('../lib/normalize');
+const { MIN_EST_YEAR } = require('./prospects-schema');
 
 const RESEARCH_FIELDS = [
   'business_name', 'trade', 'city', 'state', 'owner_name', 'phone', 'email', 'social',
@@ -18,6 +19,17 @@ const RESEARCH_FIELDS = [
   'review_verified', 'runs_ads', 'est_year', 'est_year_note', 'segment', 'hook',
   'source_run_id', 'source_kind', 'source_urls',
 ];
+
+// Dillon's columns. No automated path may write these — that is what updateResearch is
+// forbidden from touching. updateUserFields is the deliberate user-action counterpart:
+// it is what the detail page saves through, and only a person clicking Save reaches it.
+const USER_FIELDS = [
+  'stage', 'rep', 'next_action', 'next_date', 'notes',
+  'deal_service', 'deal_value', 'deal_objections', 'proposal_sent_at',
+];
+
+// Grade is excluded from USER_FIELDS on purpose: it routes through gradeProspect /
+// disqualifyProspect so a rejection always carries a reason.
 
 function getProspectById(id) {
   return getDb().prepare('SELECT * FROM prospects WHERE id = ?').get(id);
@@ -199,6 +211,25 @@ function recordTouch(prospect_id, { outcome, notes = null, rep = null }) {
   return touch(prospect_id);
 }
 
+// Call logging that does NOT schedule a next touch. recordTouch (the cadence path) stays
+// dormant; this is what the detail page calls. Stage moves only on outcomes that mean it.
+const STAGE_ON_LOG = {
+  connected: 'connected',
+  meeting_set: 'meeting_set',
+  not_interested: 'dead_nurture',
+};
+
+function logCall(prospect_id, { outcome, notes = null, channel = 'call', rep = 'Dillon' } = {}) {
+  const before = getProspectById(prospect_id);
+  if (!before) throw new Error(`No prospect ${prospect_id}`);
+
+  logActivity({ prospect_id, type: channel, outcome, notes, rep });
+
+  const stage = STAGE_ON_LOG[outcome] || (before.stage === 'new' ? 'attempting' : before.stage);
+  getDb().prepare('UPDATE prospects SET stage = ? WHERE id = ?').run(stage, prospect_id);
+  return touch(prospect_id);
+}
+
 // SQLite stores datetimes as 'YYYY-MM-DD HH:MM:SS' in UTC, matching CURRENT_TIMESTAMP.
 // Kept in one place so the write format and the read format cannot drift apart.
 function toSqlUtc(date) {
@@ -245,6 +276,6 @@ module.exports = {
   createProspect, getProspectById, getProspects, findDuplicate,
   gradeProspect, disqualifyProspect, updateResearch,
   logActivity, getActivities,
-  getCadence, recordTouch, getDueToday,
+  getCadence, recordTouch, getDueToday, logCall,
   createSourcingRun, getSourcingRunById, updateSourcingRun,
 };
