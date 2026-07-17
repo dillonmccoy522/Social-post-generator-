@@ -126,6 +126,42 @@ function updateResearch(id, fields) {
   return touch(id);
 }
 
+// The human edit path. Reachable only from the detail-page Save. It may write identity,
+// the research facts, and Dillon-owned columns — but never grade/status/disqualified_reason,
+// which route through gradeProspect/disqualifyProspect so a rejection always carries a reason.
+const EDITABLE_IDENTITY = ['business_name', 'trade', 'city', 'state', 'owner_name', 'phone', 'email', 'social'];
+const EDITABLE_FACTS = ['website_url', 'website_quality', 'rating', 'review_count', 'review_source',
+                        'est_year', 'est_year_note', 'segment', 'hook', 'runs_ads'];
+const SAVEABLE = [...EDITABLE_IDENTITY, ...EDITABLE_FACTS, ...USER_FIELDS];
+
+function saveProspectEdits(id, fields) {
+  const before = getProspectById(id);
+  if (!before) return undefined;
+  const keys = Object.keys(fields).filter((k) => SAVEABLE.includes(k));
+  if (keys.length === 0) return before;
+
+  const set = {};
+  for (const k of keys) set[k] = fields[k];
+
+  // A hand-corrected review count is a confirmed Google read.
+  if (keys.includes('review_count') && Number(fields.review_count) !== before.review_count) {
+    set.review_verified = 1;
+    if (!keys.includes('review_source')) set.review_source = 'manual';
+  }
+  // Recompute the derived keys when their inputs change.
+  if (keys.includes('phone')) set.phone_normalized = normalizePhone(fields.phone);
+  if (keys.includes('business_name') || keys.includes('city')) {
+    const name = keys.includes('business_name') ? fields.business_name : before.business_name;
+    const city = keys.includes('city') ? fields.city : before.city;
+    set.dedupe_key = dedupeKey(name, city);
+  }
+
+  const cols = Object.keys(set);
+  const assignments = cols.map((c) => `${c} = ?`).join(', ');
+  getDb().prepare(`UPDATE prospects SET ${assignments} WHERE id = ?`).run(...cols.map((c) => set[c]), id);
+  return touch(id);
+}
+
 // Append-only. There is deliberately no updateActivity or deleteActivity:
 // the record of what happened on a call is immutable, and stage is a summary of it.
 function logActivity({ prospect_id, type, outcome = null, notes = null, rep = null, cadence_step = null }) {
@@ -274,7 +310,7 @@ function updateSourcingRun(id, fields) {
 
 module.exports = {
   createProspect, getProspectById, getProspects, findDuplicate,
-  gradeProspect, disqualifyProspect, updateResearch,
+  gradeProspect, disqualifyProspect, updateResearch, saveProspectEdits,
   logActivity, getActivities,
   getCadence, recordTouch, getDueToday, logCall,
   createSourcingRun, getSourcingRunById, updateSourcingRun,

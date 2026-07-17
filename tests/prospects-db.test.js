@@ -214,3 +214,29 @@ test('logCall moves not_interested to dead_nurture', () => {
   const r = p.createProspect({ business_name: 'Top Cut Tree', city: 'Charlotte', phone: '7045550150' });
   expect(p.logCall(r.id, { outcome: 'not_interested' }).stage).toBe('dead_nurture');
 });
+
+test('saveProspectEdits writes allowed fields and recomputes derived keys', () => {
+  const r = p.createProspect({ business_name: 'Old Name', city: 'Concord', phone: '7045550000' });
+  const after = p.saveProspectEdits(r.id, { business_name: 'New Name', city: 'Charlotte', phone: '(704) 555-1111', notes: 'call after 3pm' });
+  expect(after.business_name).toBe('New Name');
+  expect(after.notes).toBe('call after 3pm');
+  expect(after.dedupe_key).toBe('new name|charlotte');
+  expect(after.phone_normalized).toBe('7045551111');
+});
+
+test('saveProspectEdits ignores grade, status, and disqualified_reason', () => {
+  const r = p.createProspect({ business_name: 'Guard Co', city: 'Charlotte', phone: '7045550002' });
+  const after = p.saveProspectEdits(r.id, { grade: 'good', status: 'qualified', disqualified_reason: 'x', hook: 'edited hook' });
+  expect(after.hook).toBe('edited hook');
+  expect(after.grade).toBeNull();
+  expect(after.status).toBe('new');
+  expect(after.disqualified_reason).toBeNull();
+});
+
+test('saveProspectEdits marks a corrected review count as verified', () => {
+  const r = p.createProspect({ business_name: 'Rev Co', city: 'Charlotte', phone: '7045550003', review_count: 150, review_verified: 0 });
+  const after = p.saveProspectEdits(r.id, { review_count: 28 });
+  expect(after.review_count).toBe(28);
+  expect(after.review_verified).toBe(1);
+  expect(after.review_source).toBe('manual');
+});
