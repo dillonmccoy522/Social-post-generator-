@@ -32,7 +32,6 @@ router.get('/stats', (_req, res) => {
     ungraded: all.filter((r) => r.status === 'new').length,
     qualified: all.filter((r) => r.status === 'qualified').length,
     disqualified: all.filter((r) => r.status === 'disqualified').length,
-    due: p.getDueToday().length,
   });
 });
 
@@ -48,7 +47,46 @@ router.get('/', (req, res) => {
 router.get('/:id', (req, res) => {
   const row = findOr404(req, res);
   if (!row) return;
-  res.json({ ...row, activities: p.getActivities(row.id) });
+  res.json({ ...row, activities: p.getActivities(row.id), contacts: p.getContacts(row.id) });
+});
+
+// The human edit path. Only a person clicking Save on the detail page reaches this.
+router.patch('/:id', (req, res) => {
+  const row = findOr404(req, res);
+  if (!row) return;
+  res.json(p.saveProspectEdits(row.id, req.body || {}));
+});
+
+// Call logging without cadence scheduling. Distinct from /touch (the dormant cadence path).
+router.post('/:id/log', (req, res) => {
+  const row = findOr404(req, res);
+  if (!row) return;
+  const { outcome, notes, channel } = req.body || {};
+  if (!OUTCOMES.includes(outcome)) {
+    return res.status(400).json({ error: `outcome must be one of: ${OUTCOMES.join(', ')}` });
+  }
+  res.json(p.logCall(row.id, { outcome, notes: notes || null, channel: channel || 'call' }));
+});
+
+router.post('/:id/contacts', (req, res) => {
+  const row = findOr404(req, res);
+  if (!row) return;
+  const { name } = req.body || {};
+  if (!name || !String(name).trim()) return res.status(400).json({ error: 'A contact needs a name.' });
+  res.status(201).json(p.createContact({ prospect_id: row.id, ...req.body }));
+});
+
+router.patch('/:id/contacts/:contactId', (req, res) => {
+  const row = findOr404(req, res);
+  if (!row) return;
+  res.json(p.updateContact(Number(req.params.contactId), req.body || {}));
+});
+
+// Retire a contact. No delete route exists, by design.
+router.post('/:id/contacts/:contactId/deactivate', (req, res) => {
+  const row = findOr404(req, res);
+  if (!row) return;
+  res.json(p.deactivateContact(Number(req.params.contactId)));
 });
 
 router.post('/:id/grade', (req, res) => {

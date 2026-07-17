@@ -144,7 +144,7 @@ test('GET /api/prospects/stats counts the pool by status', async () => {
 
   const res = await request(app).get('/api/prospects/stats');
   expect(res.status).toBe(200);
-  expect(res.body).toMatchObject({ total: 3, ungraded: 1, qualified: 1, disqualified: 1, due: 0 });
+  expect(res.body).toMatchObject({ total: 3, ungraded: 1, qualified: 1, disqualified: 1 });
 });
 
 test('the API exposes no delete route', async () => {
@@ -152,4 +152,43 @@ test('the API exposes no delete route', async () => {
   const res = await request(app).delete(`/api/prospects/${row.id}`);
   expect(res.status).toBe(404);
   expect(p.getProspectById(row.id)).toBeDefined();
+});
+
+test('GET /api/prospects/:id includes contacts', async () => {
+  const row = lead();
+  p.createContact({ prospect_id: row.id, name: 'Mike Ross', role: 'owner' });
+  const res = await request(app).get(`/api/prospects/${row.id}`);
+  expect(res.body.contacts).toHaveLength(1);
+  expect(res.body.contacts[0].name).toBe('Mike Ross');
+});
+
+test('PATCH /api/prospects/:id saves edits and 404s on a bad id', async () => {
+  const row = lead();
+  const ok = await request(app).patch(`/api/prospects/${row.id}`).send({ hook: 'edited', notes: 'n' });
+  expect(ok.status).toBe(200);
+  expect(ok.body.hook).toBe('edited');
+  const bad = await request(app).patch('/api/prospects/999999').send({ hook: 'x' });
+  expect(bad.status).toBe(404);
+});
+
+test('POST /api/prospects/:id/log logs a call and rejects a bad outcome', async () => {
+  const row = lead();
+  const ok = await request(app).post(`/api/prospects/${row.id}/log`).send({ outcome: 'connected', notes: 'hi' });
+  expect(ok.status).toBe(200);
+  expect(ok.body.stage).toBe('connected');
+  const bad = await request(app).post(`/api/prospects/${row.id}/log`).send({ outcome: 'nonsense' });
+  expect(bad.status).toBe(400);
+});
+
+test('contacts create/update/deactivate round-trip over the API', async () => {
+  const row = lead();
+  const created = await request(app).post(`/api/prospects/${row.id}/contacts`).send({ name: 'Mike', role: 'owner' });
+  expect(created.status).toBe(201);
+  const cid = created.body.id;
+  const upd = await request(app).patch(`/api/prospects/${row.id}/contacts/${cid}`).send({ is_decision_maker: 1 });
+  expect(upd.body.is_decision_maker).toBe(1);
+  const off = await request(app).post(`/api/prospects/${row.id}/contacts/${cid}/deactivate`).send();
+  expect(off.body.is_active).toBe(0);
+  const noName = await request(app).post(`/api/prospects/${row.id}/contacts`).send({ role: 'x' });
+  expect(noName.status).toBe(400);
 });
