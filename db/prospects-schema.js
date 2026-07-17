@@ -1,7 +1,17 @@
 // Schema for the prospecting CRM. Pure: takes a db handle, imports nothing.
 // Called from database.js initSchema so there is one connection and no require cycle.
 
-// The Playbook cadence, as data. Source: the call-sheet's Playbook tab.
+// Dillon decides when calls happen, not the app. Any lead built before this is still
+// worked if he wants, but nothing new gets created below it. Existing older leads are
+// flagged in the UI, never removed.
+const MIN_EST_YEAR = 2020;
+
+// DORMANT (2026-07-16). Dillon does his own scheduling: "There's no set time that I need
+// to be making all these calls. I handle that stuff." The Due Today view is gone and
+// nothing schedules a next_touch_at any more. The table, the seed, and getCadence /
+// recordTouch / getDueToday are left in place rather than ripped out with their 15 passing
+// tests, in case scheduling ever comes back. Nothing in the app calls them today.
+// The call LOG is very much alive — see logCall in db/prospects.js.
 const CADENCE = [
   { step_number: 1, day_offset: 0,  channel: 'call',  label: 'First call + intro email' },
   { step_number: 2, day_offset: 1,  channel: 'call',  label: 'Second call' },
@@ -112,12 +122,47 @@ function initProspectsSchema(db) {
       channel TEXT NOT NULL CHECK (channel IN ('call','email','dm','sms')),
       label TEXT NOT NULL
     );
+
+    -- The people, as opposed to the business. Who actually picked up, who screens the
+    -- calls, who signs. Append-only like everything else: a contact who leaves the
+    -- company gets is_active = 0, never a DELETE.
+    CREATE TABLE IF NOT EXISTS contacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      prospect_id INTEGER NOT NULL REFERENCES prospects(id),
+      name TEXT NOT NULL,
+      role TEXT DEFAULT NULL,
+      phone TEXT DEFAULT NULL,
+      email TEXT DEFAULT NULL,
+      is_decision_maker INTEGER NOT NULL DEFAULT 0,
+      is_gatekeeper INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      notes TEXT DEFAULT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_contacts_prospect ON contacts(prospect_id);
   `);
 
   const insert = db.prepare(
     'INSERT OR IGNORE INTO cadence_steps (step_number, day_offset, channel, label) VALUES (?, ?, ?, ?)'
   );
   for (const s of CADENCE) insert.run(s.step_number, s.day_offset, s.channel, s.label);
+
+  migrateDealColumns(db);
 }
 
-module.exports = { initProspectsSchema, CADENCE };
+// Deal fields. Added after the first build, so they follow the existing migrate* pattern
+// from database.js rather than being edited into the CREATE TABLE above — an existing
+// prospects table would never pick those up.
+function migrateDealColumns(db) {
+  const columns = db.prepare('PRAGMA table_info(prospects)').all().map((c) => c.name);
+  const add = (name, ddl) => {
+    if (!columns.includes(name)) db.exec(`ALTER TABLE prospects ADD COLUMN ${name} ${ddl}`);
+  };
+  add('deal_service', 'TEXT DEFAULT NULL');       // what they'd actually buy
+  add('deal_value', 'REAL DEFAULT NULL');         // rough monthly or one-off value
+  add('deal_objections', 'TEXT DEFAULT NULL');    // what is in the way
+  add('proposal_sent_at', 'DATE DEFAULT NULL');
+}
+
+module.exports = { initProspectsSchema, CADENCE, MIN_EST_YEAR };

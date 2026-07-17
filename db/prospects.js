@@ -178,6 +178,43 @@ function getActivities(prospect_id) {
   ).all(prospect_id);
 }
 
+// Contacts — the people at a business. Append-only like everything else: a contact who
+// leaves gets is_active = 0. There is deliberately no deleteContact.
+function getContacts(prospect_id) {
+  return getDb().prepare(
+    'SELECT * FROM contacts WHERE prospect_id = ? ORDER BY is_active DESC, created_at DESC, id DESC'
+  ).all(prospect_id);
+}
+
+function getContactById(id) {
+  return getDb().prepare('SELECT * FROM contacts WHERE id = ?').get(id);
+}
+
+function createContact({ prospect_id, name, role = null, phone = null, email = null,
+                         is_decision_maker = 0, is_gatekeeper = 0, notes = null }) {
+  if (!name || !String(name).trim()) throw new Error('A contact needs a name.');
+  const result = getDb().prepare(`
+    INSERT INTO contacts (prospect_id, name, role, phone, email, is_decision_maker, is_gatekeeper, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(prospect_id, String(name).trim(), role, phone, email,
+         is_decision_maker ? 1 : 0, is_gatekeeper ? 1 : 0, notes);
+  return getContactById(result.lastInsertRowid);
+}
+
+const CONTACT_FIELDS = ['name', 'role', 'phone', 'email', 'is_decision_maker', 'is_gatekeeper', 'notes'];
+function updateContact(id, fields) {
+  const keys = Object.keys(fields).filter((k) => CONTACT_FIELDS.includes(k));
+  if (keys.length === 0) return getContactById(id);
+  const set = keys.map((k) => `${k} = ?`).join(', ');
+  getDb().prepare(`UPDATE contacts SET ${set} WHERE id = ?`).run(...keys.map((k) => fields[k]), id);
+  return getContactById(id);
+}
+
+function deactivateContact(id) {
+  getDb().prepare('UPDATE contacts SET is_active = 0 WHERE id = ?').run(id);
+  return getContactById(id);
+}
+
 // Outcomes that end the sequence rather than advance it.
 const EXIT_OUTCOMES = {
   meeting_set: 'meeting_set',
@@ -312,6 +349,7 @@ module.exports = {
   createProspect, getProspectById, getProspects, findDuplicate,
   gradeProspect, disqualifyProspect, updateResearch, saveProspectEdits,
   logActivity, getActivities,
+  getContacts, getContactById, createContact, updateContact, deactivateContact,
   getCadence, recordTouch, getDueToday, logCall,
   createSourcingRun, getSourcingRunById, updateSourcingRun,
 };
